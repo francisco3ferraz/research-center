@@ -32,14 +32,11 @@ public class Publication implements Serializable {
     @Column(length = 2000)
     private String summary;
 
-    @NotBlank
-    private String fileName;
-
-    @NotBlank
-    private String filePath;
-
     @NotNull
     private LocalDateTime uploadDate;
+
+    @OneToOne(mappedBy = "publication", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Document document;
 
     private boolean visible = true;
 
@@ -76,12 +73,9 @@ public class Publication implements Serializable {
     }
 
     // Constructor with parameters
-    public Publication(String title, String summary, String fileName,
-                       String filePath, Collaborator submitter, ScientificArea area) {
+    public Publication(String title, String summary, Collaborator submitter, ScientificArea area) {
         this.title = title;
         this.summary = summary;
-        this.fileName = fileName;
-        this.filePath = filePath;
         this.uploadDate = LocalDateTime.now();
         this.submitter = submitter;
         this.area = area;
@@ -115,20 +109,12 @@ public class Publication implements Serializable {
         this.summary = summary;
     }
 
-    public String getFileName() {
-        return fileName;
+    public Document getDocument() {
+        return document;
     }
 
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-    }
-
-    public String getFilePath() {
-        return filePath;
-    }
-
-    public void setFilePath(String filePath) {
-        this.filePath = filePath;
+    public void setDocument(Document document) {
+        this.document = document;
     }
 
     public LocalDateTime getUploadDate() {
