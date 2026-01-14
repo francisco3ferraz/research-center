@@ -4,14 +4,14 @@ import jakarta.persistence.Entity;
 
 @Entity
 public class Administrator extends User {
-
+    
     // Default constructor
     public Administrator() {
         super();
     }
-
+    
     // Constructor with parameters
     public Administrator(String username, String password, String name, String email) {
-        super(username, password, name, email);
+        super(username, password, name, email, UserRole.ADMINISTRADOR);
     }
 }
