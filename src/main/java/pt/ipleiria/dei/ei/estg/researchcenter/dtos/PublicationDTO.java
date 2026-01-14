@@ -1,5 +1,6 @@
 package pt.ipleiria.dei.ei.estg.researchcenter.dtos;
 
+import org.hibernate.Hibernate;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.Publication;
 
 import java.io.Serializable;
@@ -190,9 +191,20 @@ public class PublicationDTO implements Serializable {
                 publication.getArea().getName()
         );
 
-        dto.setAverageRating(publication.getAverageRating());
-        dto.setTotalRatings(publication.getRatings().size());
-        dto.setTotalComments(publication.getComments().size());
+        // Only access lazy collections if they're initialized
+        if (Hibernate.isInitialized(publication.getRatings())) {
+            dto.setAverageRating(publication.getAverageRating());
+            dto.setTotalRatings(publication.getRatings().size());
+        } else {
+            dto.setAverageRating(0.0);
+            dto.setTotalRatings(0);
+        }
+        
+        if (Hibernate.isInitialized(publication.getComments())) {
+            dto.setTotalComments(publication.getComments().size());
+        } else {
+            dto.setTotalComments(0);
+        }
 
         if (publication.getDocument() != null) {
             dto.setDocumentId(publication.getDocument().getId());
