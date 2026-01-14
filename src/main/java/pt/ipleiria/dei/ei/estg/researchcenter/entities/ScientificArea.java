@@ -9,6 +9,12 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "scientific_areas")
 @NamedQueries({
@@ -88,4 +94,3 @@ public class ScientificArea implements Serializable {
         publications.remove(publication);
     }
 }
-
