@@ -13,16 +13,21 @@ import java.util.List;
 
 @Stateless
 public class AdministratorBean {
+    
     @PersistenceContext
     private EntityManager em;
-
+    
     public Administrator create(String username, String password, String name, String email)
             throws MyEntityExistsException, MyConstraintViolationException {
-
-        if (em.find(Administrator.class, username) != null) {
+        
+        var existing = em.createQuery("SELECT a FROM Administrator a WHERE a.username = :username", Administrator.class)
+                         .setParameter("username", username)
+                         .getResultList();
+        
+        if (!existing.isEmpty()) {
             throw new MyEntityExistsException("Administrator with username '" + username + "' already exists");
         }
-
+        
         try {
             var admin = new Administrator(username, password, name, email);
             em.persist(admin);
@@ -32,27 +37,26 @@ public class AdministratorBean {
             throw new MyConstraintViolationException(e);
         }
     }
-
-    public Administrator find(String username) throws MyEntityNotFoundException {
-        var admin = em.find(Administrator.class, username);
+    
+    public Administrator find(Long id) throws MyEntityNotFoundException {
+        var admin = em.find(Administrator.class, id);
         if (admin == null) {
-            throw new MyEntityNotFoundException("Administrator '" + username + "' not found");
+            throw new MyEntityNotFoundException("Administrator with id " + id + " not found");
         }
         return admin;
     }
-
+    
     public List<Administrator> findAll() {
         return em.createQuery("SELECT a FROM Administrator a ORDER BY a.name", Administrator.class)
-                .getResultList();
+                 .getResultList();
     }
-
-    public void update(String username, String password, String name, String email)
+    
+    public void update(Long id, String name, String email)
             throws MyEntityNotFoundException, MyConstraintViolationException {
-        var admin = find(username);
-
+        var admin = find(id);
+        
         try {
             em.lock(admin, jakarta.persistence.LockModeType.OPTIMISTIC);
-            admin.setPassword(password);
             admin.setName(name);
             admin.setEmail(email);
             em.flush();
@@ -60,9 +64,9 @@ public class AdministratorBean {
             throw new MyConstraintViolationException(e);
         }
     }
-
-    public void delete(String username) throws MyEntityNotFoundException {
-        var admin = find(username);
+    
+    public void delete(Long id) throws MyEntityNotFoundException {
+        var admin = find(id);
         em.remove(admin);
     }
 }

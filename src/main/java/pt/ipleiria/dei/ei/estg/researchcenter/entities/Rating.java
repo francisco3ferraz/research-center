@@ -8,7 +8,7 @@ import java.io.Serializable;
 
 @Entity
 @Table(name = "ratings",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"user_username", "publication_id"})
+    uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "publication_id"})
 )
 public class Rating implements Serializable {
 
@@ -22,10 +22,12 @@ public class Rating implements Serializable {
 
     @ManyToOne
     @NotNull
+    @JoinColumn(name = "user_id")
     private Collaborator user;
 
     @ManyToOne
     @NotNull
+    @JoinColumn(name = "publication_id")
     private Publication publication;
 
     @Version

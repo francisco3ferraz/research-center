@@ -13,17 +13,21 @@ import java.util.List;
 
 @Stateless
 public class ManagerBean {
-
+    
     @PersistenceContext
     private EntityManager em;
-
+    
     public Manager create(String username, String password, String name, String email)
             throws MyEntityExistsException, MyConstraintViolationException {
-
-        if (em.find(Manager.class, username) != null) {
+        
+        var existing = em.createQuery("SELECT m FROM Manager m WHERE m.username = :username", Manager.class)
+                         .setParameter("username", username)
+                         .getResultList();
+        
+        if (!existing.isEmpty()) {
             throw new MyEntityExistsException("Manager with username '" + username + "' already exists");
         }
-
+        
         try {
             var manager = new Manager(username, password, name, email);
             em.persist(manager);
@@ -33,27 +37,26 @@ public class ManagerBean {
             throw new MyConstraintViolationException(e);
         }
     }
-
-    public Manager find(String username) throws MyEntityNotFoundException {
-        var manager = em.find(Manager.class, username);
+    
+    public Manager find(Long id) throws MyEntityNotFoundException {
+        var manager = em.find(Manager.class, id);
         if (manager == null) {
-            throw new MyEntityNotFoundException("Manager '" + username + "' not found");
+            throw new MyEntityNotFoundException("Manager with id " + id + " not found");
         }
         return manager;
     }
-
+    
     public List<Manager> findAll() {
         return em.createQuery("SELECT m FROM Manager m ORDER BY m.name", Manager.class)
-                .getResultList();
+                 .getResultList();
     }
-
-    public void update(String username, String password, String name, String email)
+    
+    public void update(Long id, String name, String email)
             throws MyEntityNotFoundException, MyConstraintViolationException {
-        var manager = find(username);
-
+        var manager = find(id);
+        
         try {
             em.lock(manager, jakarta.persistence.LockModeType.OPTIMISTIC);
-            manager.setPassword(password);
             manager.setName(name);
             manager.setEmail(email);
             em.flush();
@@ -61,9 +64,9 @@ public class ManagerBean {
             throw new MyConstraintViolationException(e);
         }
     }
-
-    public void delete(String username) throws MyEntityNotFoundException {
-        var manager = find(username);
+    
+    public void delete(Long id) throws MyEntityNotFoundException {
+        var manager = find(id);
         em.remove(manager);
     }
 }

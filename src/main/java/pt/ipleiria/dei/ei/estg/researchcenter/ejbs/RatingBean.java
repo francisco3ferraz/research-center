@@ -14,48 +14,48 @@ import java.util.List;
 
 @Stateless
 public class RatingBean {
-
+    
     @PersistenceContext
     private EntityManager em;
-
+    
     @EJB
     private CollaboratorBean collaboratorBean;
-
+    
     @EJB
     private PublicationBean publicationBean;
-
-    public Rating create(int stars, String userUsername, Long publicationId)
+    
+    public Rating create(int stars, Long userId, Long publicationId)
             throws MyEntityNotFoundException, MyEntityExistsException, MyConstraintViolationException {
-
-        var user = collaboratorBean.find(userUsername);
+        
+        var user = collaboratorBean.find(userId);
         var publication = publicationBean.find(publicationId);
-
+        
         // Check if user already rated this publication
         var existingRating = em.createQuery(
-                        "SELECT r FROM Rating r WHERE r.user = :user AND r.publication = :publication",
-                        Rating.class)
-                .setParameter("user", user)
-                .setParameter("publication", publication)
-                .getResultList();
-
+            "SELECT r FROM Rating r WHERE r.user = :user AND r.publication = :publication",
+            Rating.class)
+            .setParameter("user", user)
+            .setParameter("publication", publication)
+            .getResultList();
+        
         if (!existingRating.isEmpty()) {
-            throw new MyEntityExistsException("User '" + userUsername + "' already rated publication " + publicationId);
+            throw new MyEntityExistsException("User " + userId + " already rated publication " + publicationId);
         }
-
+        
         try {
             var rating = new Rating(stars, user, publication);
             em.persist(rating);
             em.flush();
-
+            
             user.addRating(rating);
             publication.addRating(rating);
-
+            
             return rating;
         } catch (ConstraintViolationException e) {
             throw new MyConstraintViolationException(e);
         }
     }
-
+    
     public Rating find(Long id) throws MyEntityNotFoundException {
         var rating = em.find(Rating.class, id);
         if (rating == null) {
@@ -63,38 +63,38 @@ public class RatingBean {
         }
         return rating;
     }
-
-    public Rating findByUserAndPublication(String userUsername, Long publicationId)
+    
+    public Rating findByUserAndPublication(Long userId, Long publicationId) 
             throws MyEntityNotFoundException {
-        var user = collaboratorBean.find(userUsername);
+        var user = collaboratorBean.find(userId);
         var publication = publicationBean.find(publicationId);
-
+        
         var ratings = em.createQuery(
-                        "SELECT r FROM Rating r WHERE r.user = :user AND r.publication = :publication",
-                        Rating.class)
-                .setParameter("user", user)
-                .setParameter("publication", publication)
-                .getResultList();
-
+            "SELECT r FROM Rating r WHERE r.user = :user AND r.publication = :publication",
+            Rating.class)
+            .setParameter("user", user)
+            .setParameter("publication", publication)
+            .getResultList();
+        
         if (ratings.isEmpty()) {
-            throw new MyEntityNotFoundException("Rating not found for user '" + userUsername + "' and publication " + publicationId);
+            throw new MyEntityNotFoundException("Rating not found for user " + userId + " and publication " + publicationId);
         }
         return ratings.get(0);
     }
-
+    
     public List<Rating> findByPublication(Long publicationId) throws MyEntityNotFoundException {
         var publication = publicationBean.find(publicationId);
         return em.createQuery(
-                        "SELECT r FROM Rating r WHERE r.publication = :publication",
-                        Rating.class)
-                .setParameter("publication", publication)
-                .getResultList();
+            "SELECT r FROM Rating r WHERE r.publication = :publication",
+            Rating.class)
+            .setParameter("publication", publication)
+            .getResultList();
     }
-
+    
     public void update(Long id, int stars)
             throws MyEntityNotFoundException, MyConstraintViolationException {
         var rating = find(id);
-
+        
         try {
             em.lock(rating, jakarta.persistence.LockModeType.OPTIMISTIC);
             rating.setStars(stars);
@@ -103,15 +103,21 @@ public class RatingBean {
             throw new MyConstraintViolationException(e);
         }
     }
-
-    public void updateByUserAndPublication(String userUsername, Long publicationId, int stars)
+    
+    public void updateByUserAndPublication(Long userId, Long publicationId, int stars)
             throws MyEntityNotFoundException, MyConstraintViolationException {
-        var rating = findByUserAndPublication(userUsername, publicationId);
+        var rating = findByUserAndPublication(userId, publicationId);
         update(rating.getId(), stars);
     }
-
+    
     public void delete(Long id) throws MyEntityNotFoundException {
         var rating = find(id);
         em.remove(rating);
+    }
+    
+    public void deleteByUserAndPublication(Long userId, Long publicationId) 
+            throws MyEntityNotFoundException {
+        var rating = findByUserAndPublication(userId, publicationId);
+        delete(rating.getId());
     }
 }

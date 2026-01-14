@@ -4,149 +4,174 @@ import jakarta.annotation.PostConstruct;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Singleton;
 import jakarta.ejb.Startup;
+import pt.ipleiria.dei.ei.estg.researchcenter.entities.PublicationType;
+
+import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Logger;
 
 @Startup
 @Singleton
 public class ConfigBean {
-
+    
     private static final Logger logger = Logger.getLogger("ejbs.ConfigBean");
-
-    @EJB
-    private ScientificAreaBean scientificAreaBean;
-
+    
     @EJB
     private CollaboratorBean collaboratorBean;
-
+    
     @EJB
     private ManagerBean managerBean;
-
+    
     @EJB
     private AdministratorBean administratorBean;
-
+    
     @EJB
     private TagBean tagBean;
-
+    
     @EJB
     private PublicationBean publicationBean;
-
+    
     @EJB
     private CommentBean commentBean;
-
+    
     @EJB
     private RatingBean ratingBean;
-
+    
+    @EJB
+    private ActivityLogBean activityLogBean;
+    
     @PostConstruct
     public void populateDB() {
         System.out.println("Hello Publications Platform!");
         logger.info("Database population started...");
-
+        
         try {
-            // Create Scientific Areas
-            scientificAreaBean.create("Data Science");
-            scientificAreaBean.create("Material Science");
-            scientificAreaBean.create("Artificial Intelligence");
-            scientificAreaBean.create("Quantum Computing");
-            logger.info("Scientific areas created");
-
             // Create Tags
-            tagBean.create("Projeto X");
-            tagBean.create("Projeto Y");
-            tagBean.create("Machine Learning");
-            tagBean.create("Deep Learning");
-            tagBean.create("Urgent");
+            tagBean.create("Projeto X", "Publicações relacionadas com o Projeto X");
+            tagBean.create("Projeto Y", "Publicações relacionadas com o Projeto Y");
+            tagBean.create("Machine Learning", "Técnicas e aplicações de ML");
+            tagBean.create("Deep Learning", "Redes neurais profundas");
+            tagBean.create("Urgent", "Conteúdo urgente");
             logger.info("Tags created");
-
+            
             // Create Users
-            administratorBean.create("admin", "admin123", "Administrator User", "admin@research.pt");
-
-            managerBean.create("manager1", "manager123", "Maria Manager", "maria@research.pt");
-
-            collaboratorBean.create("joao", "joao123", "João A", "joao@research.pt");
-            collaboratorBean.create("joana", "joana123", "Joana B", "joana@research.pt");
-            collaboratorBean.create("manuel", "manuel123", "Manuel C", "manuel@research.pt");
-            collaboratorBean.create("ana", "ana123", "Ana D", "ana@research.pt");
-            logger.info("Users created");
-
+            var admin = administratorBean.create("admin", "admin123", "Administrator User", "admin@research.pt");
+            logger.info("Administrator created with ID: " + admin.getId());
+            
+            var manager = managerBean.create("manager1", "manager123", "Maria Manager", "maria@research.pt");
+            logger.info("Manager created with ID: " + manager.getId());
+            
+            var joao = collaboratorBean.create("joao", "joao123", "João A", "joao@research.pt");
+            var joana = collaboratorBean.create("joana", "joana123", "Joana B", "joana@research.pt");
+            var manuel = collaboratorBean.create("manuel", "manuel123", "Manuel C", "manuel@research.pt");
+            var ana = collaboratorBean.create("ana", "ana123", "Ana D", "ana@research.pt");
+            logger.info("Collaborators created");
+            
             // Create Publications
-            Long pub1 = publicationBean.create(
-                    "Machine Learning in Data Science",
-                    "This paper explores the application of ML techniques in data analysis.",
-                    "joao",
-                    1L // Data Science
-            ).getId();
-
-            Long pub2 = publicationBean.create(
-                    "Quantum Materials Research",
-                    "A comprehensive study on quantum properties of new materials.",
-                    "joana",
-                    2L // Material Science
-            ).getId();
-
-            Long pub3 = publicationBean.create(
-                    "Deep Learning for Image Recognition",
-                    "Novel approach to image classification using deep neural networks.",
-                    "manuel",
-                    3L // AI
-            ).getId();
-
+            var pub1 = publicationBean.create(
+                "Machine Learning in Data Science",
+                Arrays.asList("João A", "Maria Santos"),
+                PublicationType.ARTICLE,
+                "Ciência de Dados",
+                2024,
+                "This paper explores the application of ML techniques in data analysis.",
+                joao.getId()
+            );
+            pub1.setPublisher("IEEE");
+            pub1.setDoi("10.1109/example.2024.123456");
+            pub1.setAiGeneratedSummary("Este artigo apresenta técnicas inovadoras de machine learning aplicadas à ciência de dados...");
+            
+            var pub2 = publicationBean.create(
+                "Quantum Materials Research",
+                Arrays.asList("Joana B", "Pedro Silva"),
+                PublicationType.ARTICLE,
+                "Ciência dos Materiais",
+                2024,
+                "A comprehensive study on quantum properties of new materials.",
+                joana.getId()
+            );
+            pub2.setPublisher("Nature");
+            pub2.setDoi("10.1038/example.2024.789");
+            
+            var pub3 = publicationBean.create(
+                "Deep Learning for Image Recognition",
+                Arrays.asList("Manuel C"),
+                PublicationType.CONFERENCE,
+                "Inteligência Artificial",
+                2025,
+                "Novel approach to image classification using deep neural networks.",
+                manuel.getId()
+            );
+            pub3.setPublisher("ACM");
+            pub3.setConfidential(false);
+            
             logger.info("Publications created");
-
+            
             // Add tags to publications
-            publicationBean.addTag(pub1, 1L); // Projeto X
-            publicationBean.addTag(pub1, 3L); // Machine Learning
-
-            publicationBean.addTag(pub2, 2L); // Projeto Y
-
-            publicationBean.addTag(pub3, 1L); // Projeto X
-            publicationBean.addTag(pub3, 3L); // Machine Learning
-            publicationBean.addTag(pub3, 4L); // Deep Learning
-            publicationBean.addTag(pub3, 5L); // Urgent
-
+            publicationBean.addTag(pub1.getId(), 1L); // Projeto X
+            publicationBean.addTag(pub1.getId(), 3L); // Machine Learning
+            
+            publicationBean.addTag(pub2.getId(), 2L); // Projeto Y
+            
+            publicationBean.addTag(pub3.getId(), 1L); // Projeto X
+            publicationBean.addTag(pub3.getId(), 3L); // Machine Learning
+            publicationBean.addTag(pub3.getId(), 4L); // Deep Learning
+            publicationBean.addTag(pub3.getId(), 5L); // Urgent
+            
             logger.info("Tags added to publications");
-
+            
             // Create Comments
             commentBean.create(
-                    "Parem com tudo! Esta nova técnica pode revolucionar a nossa abordagem ao Projeto X!",
-                    "joana",
-                    pub1
+                "Parem com tudo! Esta nova técnica pode revolucionar a nossa abordagem ao Projeto X!",
+                joana.getId(),
+                pub1.getId()
             );
-
+            
             commentBean.create(
-                    "Excelente trabalho! Muito relevante para o Projeto X.",
-                    "manuel",
-                    pub1
+                "Excelente trabalho! Muito relevante para o Projeto X.",
+                manuel.getId(),
+                pub1.getId()
             );
-
+            
             commentBean.create(
-                    "Esta abordagem precisa de mais validação experimental.",
-                    "ana",
-                    pub2
+                "Esta abordagem precisa de mais validação experimental.",
+                ana.getId(),
+                pub2.getId()
             );
-
+            
             logger.info("Comments created");
-
+            
             // Create Ratings
-            ratingBean.create(5, "joao", pub2);
-            ratingBean.create(4, "joana", pub1);
-            ratingBean.create(5, "manuel", pub1);
-            ratingBean.create(4, "ana", pub3);
-            ratingBean.create(5, "joao", pub3);
-
+            ratingBean.create(5, joao.getId(), pub2.getId());
+            ratingBean.create(4, joana.getId(), pub1.getId());
+            ratingBean.create(5, manuel.getId(), pub1.getId());
+            ratingBean.create(4, ana.getId(), pub3.getId());
+            ratingBean.create(5, joao.getId(), pub3.getId());
+            
             logger.info("Ratings created");
-
+            
             // Subscribe users to tags
-            collaboratorBean.subscribeToTag("joao", 1L); // João subscribes to Projeto X
-            collaboratorBean.subscribeToTag("manuel", 1L); // Manuel subscribes to Projeto X
-            collaboratorBean.subscribeToTag("ana", 2L); // Ana subscribes to Projeto Y
-
+            collaboratorBean.subscribeToTag(joao.getId(), 1L); // João subscribes to Projeto X
+            collaboratorBean.subscribeToTag(manuel.getId(), 1L); // Manuel subscribes to Projeto X
+            collaboratorBean.subscribeToTag(ana.getId(), 2L); // Ana subscribes to Projeto Y
+            
             logger.info("Tag subscriptions created");
-
+            
+            // Create some activity logs
+            activityLogBean.create(joao, "UPLOAD_PUBLICATION", "PUBLICATION", pub1.getId(), 
+                "Upload da publicação 'Machine Learning in Data Science'");
+            activityLogBean.create(joana, "UPLOAD_PUBLICATION", "PUBLICATION", pub2.getId(), 
+                "Upload da publicação 'Quantum Materials Research'");
+            activityLogBean.create(manuel, "ADD_COMMENT", "PUBLICATION", pub1.getId(), 
+                "Comentário adicionado à publicação");
+            
+            logger.info("Activity logs created");
+            
         } catch (Exception e) {
             logger.severe("Error populating database: " + e.getMessage());
             e.printStackTrace();
         }
-
+        
         logger.info("Database population completed!");
     }
 }

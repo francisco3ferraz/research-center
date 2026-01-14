@@ -68,6 +68,14 @@ public class Publication implements Serializable {
     @JoinColumn(name = "uploaded_by_id")
     @NotNull
     private Collaborator uploadedBy;
+
+    @ManyToOne
+    @JoinColumn(name = "area_id")
+    private ScientificArea area;
+
+    @ManyToOne
+    @JoinColumn(name = "submitter_id")
+    private Collaborator submitter;
     
     @OneToOne(mappedBy = "publication", cascade = CascadeType.ALL, orphanRemoval = true)
     private Document document;
@@ -233,6 +241,22 @@ public class Publication implements Serializable {
     
     public void setUploadedBy(Collaborator uploadedBy) {
         this.uploadedBy = uploadedBy;
+    }
+
+    public ScientificArea getArea() {
+        return area;
+    }
+
+    public void setArea(ScientificArea area) {
+        this.area = area;
+    }
+
+    public Collaborator getSubmitter() {
+        return submitter;
+    }
+
+    public void setSubmitter(Collaborator submitter) {
+        this.submitter = submitter;
     }
     
     public Document getDocument() {
