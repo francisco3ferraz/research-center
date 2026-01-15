@@ -8,6 +8,7 @@ import pt.ipleiria.dei.ei.estg.researchcenter.entities.Administrator;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyConstraintViolationException;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityExistsException;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
+import pt.ipleiria.dei.ei.estg.researchcenter.security.Hasher;
 
 import java.util.List;
 
@@ -29,7 +30,7 @@ public class AdministratorBean {
         }
         
         try {
-            var admin = new Administrator(username, password, name, email);
+            var admin = new Administrator(username, Hasher.hash(password), name, email);
             em.persist(admin);
             em.flush();
             return admin;

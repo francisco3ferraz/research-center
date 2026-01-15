@@ -9,6 +9,7 @@ import pt.ipleiria.dei.ei.estg.researchcenter.entities.Collaborator;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyConstraintViolationException;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityExistsException;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
+import pt.ipleiria.dei.ei.estg.researchcenter.security.Hasher;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -35,7 +36,7 @@ public class CollaboratorBean {
         }
         
         try {
-            var collaborator = new Collaborator(username, password, name, email);
+            var collaborator = new Collaborator(username, Hasher.hash(password), name, email);
             em.persist(collaborator);
             em.flush();
             return collaborator;

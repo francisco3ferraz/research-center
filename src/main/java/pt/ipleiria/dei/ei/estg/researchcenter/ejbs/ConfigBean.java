@@ -170,7 +170,15 @@ public class ConfigBean {
             logger.info("Tag subscriptions created");
             
             // Create some activity logs
-            activityLogBean.create(joao, "UPLOAD_PUBLICATION", "PUBLICATION", pub1.getId(), 
+            activityLogBean.create(admin, "CREATE_USER", "USER", joao.getId(),
+                "Criação do utilizador 'João A'");
+            activityLogBean.create(admin, "CREATE_USER", "USER", joana.getId(),
+                "Criação do utilizador 'Joana B'");
+            activityLogBean.create(admin, "CREATE_USER", "USER", manuel.getId(),
+                "Criação do utilizador 'Manuel C'");
+            activityLogBean.create(manager, "CREATE_TAG", "TAG", 1L,
+                "Criação da tag 'Projeto X'");
+            activityLogBean.create(joao, "UPLOAD_PUBLICATION", "PUBLICATION", pub1.getId(),
                 "Upload da publicação 'Machine Learning in Data Science'");
             activityLogBean.create(joana, "UPLOAD_PUBLICATION", "PUBLICATION", pub2.getId(), 
                 "Upload da publicação 'Quantum Materials Research'");

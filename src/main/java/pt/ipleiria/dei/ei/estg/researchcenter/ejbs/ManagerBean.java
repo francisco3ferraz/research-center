@@ -8,6 +8,7 @@ import pt.ipleiria.dei.ei.estg.researchcenter.entities.Manager;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyConstraintViolationException;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityExistsException;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
+import pt.ipleiria.dei.ei.estg.researchcenter.security.Hasher;
 
 import java.util.List;
 
@@ -29,7 +30,7 @@ public class ManagerBean {
         }
         
         try {
-            var manager = new Manager(username, password, name, email);
+            var manager = new Manager(username, Hasher.hash(password), name, email);
             em.persist(manager);
             em.flush();
             return manager;
