@@ -5,12 +5,15 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.validation.ConstraintViolationException;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.Tag;
+import pt.ipleiria.dei.ei.estg.researchcenter.entities.Publication;
+import pt.ipleiria.dei.ei.estg.researchcenter.entities.Collaborator;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyConstraintViolationException;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityExistsException;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
 
 @Stateless
 public class TagBean {
@@ -46,6 +49,9 @@ public class TagBean {
         if (tag == null) {
             throw new MyEntityNotFoundException("Tag with id " + id + " not found");
         }
+        // Initialize lazy collections while entity is managed
+        tag.getPublications().size();
+        tag.getSubscribers().size();
         return tag;
     }
     
@@ -57,21 +63,41 @@ public class TagBean {
         if (tags.isEmpty()) {
             throw new MyEntityNotFoundException("Tag '" + name + "' not found");
         }
-        return tags.get(0);
+        var tag = tags.get(0);
+        // Initialize lazy collections
+        tag.getPublications().size();
+        tag.getSubscribers().size();
+        return tag;
     }
     
     public List<Tag> findAll() {
-        return em.createNamedQuery("getAllTags", Tag.class).getResultList();
+        var list = em.createNamedQuery("getAllTags", Tag.class).getResultList();
+        // Initialize collections for each tag
+        for (var t : list) {
+            t.getPublications().size();
+            t.getSubscribers().size();
+        }
+        return list;
     }
     
     public List<Tag> findAllVisible() {
-        return em.createQuery("SELECT t FROM Tag t WHERE t.visible = true ORDER BY t.name", Tag.class)
+        var list = em.createQuery("SELECT t FROM Tag t WHERE t.visible = true ORDER BY t.name", Tag.class)
                  .getResultList();
+        for (var t : list) {
+            t.getPublications().size();
+            t.getSubscribers().size();
+        }
+        return list;
     }
     
     public List<Tag> findAllHidden() {
-        return em.createQuery("SELECT t FROM Tag t WHERE t.visible = false ORDER BY t.name", Tag.class)
+        var list = em.createQuery("SELECT t FROM Tag t WHERE t.visible = false ORDER BY t.name", Tag.class)
                  .getResultList();
+        for (var t : list) {
+            t.getPublications().size();
+            t.getSubscribers().size();
+        }
+        return list;
     }
     
     public void update(Long id, String name, String description) 
@@ -97,6 +123,28 @@ public class TagBean {
     
     public void delete(Long id) throws MyEntityNotFoundException {
         var tag = find(id);
+
+        // Detach this tag from all publications
+        var pubs = new ArrayList<Publication>(tag.getPublications());
+        for (Publication p : pubs) {
+            p.getTags().remove(tag);
+            em.merge(p);
+        }
+
+        // Detach this tag from all subscribers
+        var subs = new ArrayList<Collaborator>(tag.getSubscribers());
+        for (Collaborator c : subs) {
+            c.getSubscribedTags().remove(tag);
+            em.merge(c);
+        }
+
+        // Clear associations on tag side
+        tag.getPublications().clear();
+        tag.getSubscribers().clear();
+
+        // Now safe to remove
+        if (!em.contains(tag)) tag = em.merge(tag);
         em.remove(tag);
+        em.flush();
     }
 }
