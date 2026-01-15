@@ -4,7 +4,9 @@ import pt.ipleiria.dei.ei.estg.researchcenter.entities.Publication;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.PublicationType;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import pt.ipleiria.dei.ei.estg.researchcenter.dtos.CollaboratorDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import jakarta.json.bind.annotation.JsonbProperty;
@@ -26,10 +28,9 @@ public class PublicationDTO implements Serializable {
     private String aiGeneratedSummary;
     private boolean visible;
     private boolean confidential;
-    private LocalDateTime uploadedAt;
-    private LocalDateTime updatedAt;
-    private Long uploadedById;
-    private String uploadedByName;
+    private OffsetDateTime uploadedAt;
+    private OffsetDateTime updatedAt;
+    private CollaboratorDTO uploadedBy;
     private List<TagDTO> tags;
     private List<CommentDTO> comments;
     private double averageRating;
@@ -47,7 +48,7 @@ public class PublicationDTO implements Serializable {
     public PublicationDTO(Long id, String title, List<String> authors, PublicationType type,
                          String areaScientific, Integer year, String abstract_,
                          boolean visible, boolean confidential,
-                         LocalDateTime uploadedAt, Long uploadedById, String uploadedByName) {
+                         OffsetDateTime uploadedAt, CollaboratorDTO uploadedBy) {
         this.id = id;
         this.title = title;
         this.authors = authors;
@@ -58,8 +59,7 @@ public class PublicationDTO implements Serializable {
         this.visible = visible;
         this.confidential = confidential;
         this.uploadedAt = uploadedAt;
-        this.uploadedById = uploadedById;
-        this.uploadedByName = uploadedByName;
+        this.uploadedBy = uploadedBy;
     }
     
     // Getters and Setters
@@ -159,36 +159,28 @@ public class PublicationDTO implements Serializable {
         this.confidential = confidential;
     }
     
-    public LocalDateTime getUploadedAt() {
+    public OffsetDateTime getUploadedAt() {
         return uploadedAt;
     }
-    
-    public void setUploadedAt(LocalDateTime uploadedAt) {
+
+    public void setUploadedAt(OffsetDateTime uploadedAt) {
         this.uploadedAt = uploadedAt;
     }
-    
-    public LocalDateTime getUpdatedAt() {
+
+    public OffsetDateTime getUpdatedAt() {
         return updatedAt;
     }
-    
-    public void setUpdatedAt(LocalDateTime updatedAt) {
+
+    public void setUpdatedAt(OffsetDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
-    
-    public Long getUploadedById() {
-        return uploadedById;
+
+    public CollaboratorDTO getUploadedBy() {
+        return uploadedBy;
     }
-    
-    public void setUploadedById(Long uploadedById) {
-        this.uploadedById = uploadedById;
-    }
-    
-    public String getUploadedByName() {
-        return uploadedByName;
-    }
-    
-    public void setUploadedByName(String uploadedByName) {
-        this.uploadedByName = uploadedByName;
+
+    public void setUploadedBy(CollaboratorDTO uploadedBy) {
+        this.uploadedBy = uploadedBy;
     }
     
     public List<TagDTO> getTags() {
@@ -257,6 +249,14 @@ public class PublicationDTO implements Serializable {
     
     // Conversion methods
     public static PublicationDTO from(Publication publication) {
+        OffsetDateTime up = null;
+        OffsetDateTime upd = null;
+        if (publication.getUploadedAt() != null) {
+            up = publication.getUploadedAt().atOffset(ZoneOffset.UTC);
+        }
+        if (publication.getUpdatedAt() != null) {
+            upd = publication.getUpdatedAt().atOffset(ZoneOffset.UTC);
+        }
         var dto = new PublicationDTO(
             publication.getId(),
             publication.getTitle(),
@@ -267,25 +267,24 @@ public class PublicationDTO implements Serializable {
             publication.getAbstract_(),
             publication.isVisible(),
             publication.isConfidential(),
-            publication.getUploadedAt(),
-            publication.getUploadedBy().getId(),
-            publication.getUploadedBy().getName()
+            up,
+            publication.getUploadedBy() != null ? CollaboratorDTO.from(publication.getUploadedBy()) : null
         );
-        
+
         dto.setPublisher(publication.getPublisher());
         dto.setDoi(publication.getDoi());
         dto.setAiGeneratedSummary(publication.getAiGeneratedSummary());
-        dto.setUpdatedAt(publication.getUpdatedAt());
+        dto.setUpdatedAt(upd);
         dto.setAverageRating(publication.getAverageRating());
         dto.setRatingsCount(publication.getRatings().size());
         dto.setCommentsCount(publication.getComments().size());
-        
+
         if (publication.getDocument() != null) {
             dto.setDocumentId(publication.getDocument().getId());
             dto.setDocumentFilename(publication.getDocument().getFilename());
             dto.setFileUrl("/api/publications/" + publication.getId() + "/file");
         }
-        
+
         return dto;
     }
     

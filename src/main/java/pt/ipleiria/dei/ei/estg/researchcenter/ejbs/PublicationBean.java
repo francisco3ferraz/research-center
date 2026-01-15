@@ -96,6 +96,63 @@ public class PublicationBean {
             .setParameter("area", areaScientific)
             .getResultList();
     }
+
+    public List<Publication> findWithFilters(String search, String areaScientific, Long tagId,
+                                             java.time.LocalDateTime dateFrom, java.time.LocalDateTime dateTo,
+                                             int page, int size) {
+        StringBuilder sb = new StringBuilder("SELECT p FROM Publication p ");
+        if (tagId != null) sb.append(" JOIN p.tags t ");
+        sb.append(" WHERE 1=1 ");
+        if (areaScientific != null && !areaScientific.isBlank()) sb.append(" AND p.areaScientific = :area ");
+        if (search != null && !search.isBlank()) sb.append(" AND (LOWER(p.title) LIKE :search OR EXISTS (SELECT a FROM p.authors a WHERE LOWER(a) LIKE :search)) ");
+        if (tagId != null) sb.append(" AND t.id = :tagId ");
+        if (dateFrom != null) sb.append(" AND p.uploadedAt >= :dateFrom ");
+        if (dateTo != null) sb.append(" AND p.uploadedAt <= :dateTo ");
+        sb.append(" ORDER BY p.uploadedAt DESC");
+
+        var q = em.createQuery(sb.toString(), Publication.class);
+        if (areaScientific != null && !areaScientific.isBlank()) q.setParameter("area", areaScientific);
+        if (search != null && !search.isBlank()) q.setParameter("search", "%" + search.toLowerCase() + "%");
+        if (tagId != null) q.setParameter("tagId", tagId);
+        if (dateFrom != null) q.setParameter("dateFrom", dateFrom);
+        if (dateTo != null) q.setParameter("dateTo", dateTo);
+        if (page >= 0 && size > 0) {
+            q.setFirstResult(page * size);
+            q.setMaxResults(size);
+        }
+        var list = q.getResultList();
+        // Ensure lazy collections are initialized to avoid lazy-init outside transaction
+        for (Publication p : list) {
+            try {
+                Hibernate.initialize(p.getTags());
+                Hibernate.initialize(p.getComments());
+                Hibernate.initialize(p.getRatings());
+                Hibernate.initialize(p.getAuthors());
+            } catch (Exception ignore) {
+            }
+        }
+        return list;
+    }
+
+    public long countWithFilters(String search, String areaScientific, Long tagId,
+                                  java.time.LocalDateTime dateFrom, java.time.LocalDateTime dateTo) {
+        StringBuilder sb = new StringBuilder("SELECT COUNT(DISTINCT p) FROM Publication p ");
+        if (tagId != null) sb.append(" JOIN p.tags t ");
+        sb.append(" WHERE 1=1 ");
+        if (areaScientific != null && !areaScientific.isBlank()) sb.append(" AND p.areaScientific = :area ");
+        if (search != null && !search.isBlank()) sb.append(" AND (LOWER(p.title) LIKE :search OR EXISTS (SELECT a FROM p.authors a WHERE LOWER(a) LIKE :search)) ");
+        if (tagId != null) sb.append(" AND t.id = :tagId ");
+        if (dateFrom != null) sb.append(" AND p.uploadedAt >= :dateFrom ");
+        if (dateTo != null) sb.append(" AND p.uploadedAt <= :dateTo ");
+
+        var q = em.createQuery(sb.toString(), Long.class);
+        if (areaScientific != null && !areaScientific.isBlank()) q.setParameter("area", areaScientific);
+        if (search != null && !search.isBlank()) q.setParameter("search", "%" + search.toLowerCase() + "%");
+        if (tagId != null) q.setParameter("tagId", tagId);
+        if (dateFrom != null) q.setParameter("dateFrom", dateFrom);
+        if (dateTo != null) q.setParameter("dateTo", dateTo);
+        return q.getSingleResult();
+    }
     
     public List<Publication> findByTag(Long tagId) throws MyEntityNotFoundException {
         var tag = tagBean.find(tagId);

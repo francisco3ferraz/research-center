@@ -8,8 +8,10 @@ import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 import pt.ipleiria.dei.ei.estg.researchcenter.dtos.PublicationDTO;
 import pt.ipleiria.dei.ei.estg.researchcenter.dtos.TagDTO;
+import pt.ipleiria.dei.ei.estg.researchcenter.security.Authenticated;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.DocumentBean;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.PublicationBean;
+import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.CollaboratorBean;
 
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
@@ -25,6 +27,8 @@ import java.util.ArrayList;
 import java.util.stream.Collectors;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.Publication;
 import jakarta.ws.rs.core.StreamingOutput;
+import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.core.Context;
 
 @Path("publications")
 @Produces({MediaType.APPLICATION_JSON})
@@ -35,19 +39,52 @@ public class PublicationService {
     private PublicationBean publicationBean;
     @EJB
     private DocumentBean documentBean;
+    @EJB
+    private CollaboratorBean collaboratorBean;
+    @Context
+    private jakarta.ws.rs.core.SecurityContext securityContext;
+
+    private void ensureAuthorOrResponsibleOrAdmin(Long publicationId) throws Exception {
+        var pub = publicationBean.find(publicationId);
+        String username = securityContext.getUserPrincipal() != null ? securityContext.getUserPrincipal().getName() : null;
+        if (username == null) throw new jakarta.ws.rs.NotAuthorizedException("Authentication required");
+        var coll = collaboratorBean.findByUsername(username);
+        if (pub.getUploadedBy() != null && pub.getUploadedBy().getId().equals(coll.getId())) return;
+        if (securityContext.isUserInRole("RESPONSAVEL") || securityContext.isUserInRole("ADMINISTRADOR")) return;
+        throw new ForbiddenException("Insufficient permissions");
+    }
     
     @GET
-    public Response getAll() {
-        var publications = publicationBean.findAll();
-        List<Publication> full = new ArrayList<>();
-        for (Publication p : publications) {
-            try {
-                full.add(publicationBean.findWithDetails(p.getId()));
-            } catch (Exception e) {
-                // skip if cannot load details for a publication
-            }
+    public Response getAll(
+            @QueryParam("search") String search,
+            @QueryParam("areaScientific") String areaScientific,
+            @QueryParam("tag") Long tagId,
+            @QueryParam("dateFrom") String dateFromStr,
+            @QueryParam("dateTo") String dateToStr,
+            @QueryParam("page") @DefaultValue("0") int page,
+            @QueryParam("size") @DefaultValue("10") int size
+    ) {
+        java.time.LocalDateTime dateFrom = null;
+        java.time.LocalDateTime dateTo = null;
+        try {
+            if (dateFromStr != null && !dateFromStr.isBlank()) dateFrom = java.time.LocalDateTime.parse(dateFromStr);
+            if (dateToStr != null && !dateToStr.isBlank()) dateTo = java.time.LocalDateTime.parse(dateToStr);
+        } catch (Exception ex) {
+            // ignore parse errors and treat as null
         }
-        return Response.ok(PublicationDTO.from(full)).build();
+
+        var pubs = publicationBean.findWithFilters(search, areaScientific, tagId, dateFrom, dateTo, page, size);
+        long total = publicationBean.countWithFilters(search, areaScientific, tagId, dateFrom, dateTo);
+        int totalPages = size > 0 ? (int) ((total + size - 1) / size) : 1;
+        var content = PublicationDTO.from(pubs);
+        var result = Map.of(
+                "content", content,
+                "totalElements", total,
+                "totalPages", totalPages,
+                "currentPage", page,
+                "pageSize", size
+        );
+        return Response.ok(result).build();
     }
     
     @GET
@@ -79,7 +116,12 @@ public class PublicationService {
     }
     
     @POST
+    @Authenticated
     public Response create(PublicationDTO dto) throws Exception {
+        // Use authenticated user as uploader
+        String username = securityContext.getUserPrincipal() != null ? securityContext.getUserPrincipal().getName() : null;
+        if (username == null) throw new jakarta.ws.rs.NotAuthorizedException("Authentication required");
+        var uploader = collaboratorBean.findByUsername(username);
         var publication = publicationBean.create(
             dto.getTitle(),
             dto.getAuthors(),
@@ -87,7 +129,7 @@ public class PublicationService {
             dto.getAreaScientific(),
             dto.getYear(),
             dto.getAbstract_(),
-            dto.getUploadedById()
+            uploader.getId()
         );
         
         // Set optional fields if provided
@@ -103,14 +145,21 @@ public class PublicationService {
                 dto.getDoi()
             );
         }
-        
+
+        // Attach tags if provided in metadata
+        if (dto.getTags() != null) {
+            for (TagDTO t : dto.getTags()) {
+                if (t != null && t.getId() != null) publicationBean.addTag(publication.getId(), t.getId());
+            }
+        }
+        var pub = publicationBean.findWithDetails(publication.getId());
         return Response.status(Response.Status.CREATED)
-                       .entity(PublicationDTO.from(publication))
+                       .entity(PublicationDTO.fromWithDetails(pub))
                        .build();
     }
 
     @POST
-    @Path("/upload")
+    @Authenticated
     @Consumes({MediaType.MULTIPART_FORM_DATA})
     public Response createMultipart(MultipartFormDataInput input) throws Exception {
         Map<String, List<InputPart>> form = input.getFormDataMap();
@@ -125,6 +174,10 @@ public class PublicationService {
         Jsonb jsonb = JsonbBuilder.create();
         PublicationDTO dto = metadataJson != null ? jsonb.fromJson(metadataJson, PublicationDTO.class) : new PublicationDTO();
 
+        String username = securityContext.getUserPrincipal() != null ? securityContext.getUserPrincipal().getName() : null;
+        if (username == null) throw new jakarta.ws.rs.NotAuthorizedException("Authentication required");
+        var uploader = collaboratorBean.findByUsername(username);
+
         var publication = publicationBean.create(
             dto.getTitle(),
             dto.getAuthors(),
@@ -132,7 +185,7 @@ public class PublicationService {
             dto.getAreaScientific(),
             dto.getYear(),
             dto.getAbstract_(),
-            dto.getUploadedById()
+            uploader.getId()
         );
 
         if (dto.getPublisher() != null || dto.getDoi() != null || dto.getAiGeneratedSummary() != null) {
@@ -146,6 +199,13 @@ public class PublicationService {
                 dto.getPublisher(),
                 dto.getDoi()
             );
+        }
+
+        // Attach tags if provided
+        if (dto.getTags() != null) {
+            for (TagDTO t : dto.getTags()) {
+                if (t != null && t.getId() != null) publicationBean.addTag(publication.getId(), t.getId());
+            }
         }
 
         // Handle file upload if present
@@ -173,8 +233,10 @@ public class PublicationService {
     }
     
     @PUT
+    @Authenticated
     @Path("/{id}")
     public Response update(@PathParam("id") Long id, PublicationDTO dto) throws Exception {
+        ensureAuthorOrResponsibleOrAdmin(id);
         publicationBean.update(
             id,
             dto.getTitle(),
@@ -190,14 +252,17 @@ public class PublicationService {
     }
     
     @DELETE
+    @Authenticated
     @Path("/{id}")
     public Response delete(@PathParam("id") Long id) throws Exception {
+        ensureAuthorOrResponsibleOrAdmin(id);
         publicationBean.delete(id);
         return Response.ok(Map.of("message", "Publicação removida com sucesso")).build();
     }
     
     @POST
     @Path("/{id}/tags/{tagId}")
+    @Authenticated
     public Response addTag(@PathParam("id") Long id, @PathParam("tagId") Long tagId) throws Exception {
         publicationBean.addTag(id, tagId);
         var resultDto = publicationBean.getDTOWithDetails(id);
@@ -207,6 +272,7 @@ public class PublicationService {
     // Spec-compliant: accept JSON body { "tagId": 5 }
     @POST
     @Path("/{id}/tags")
+    @Authenticated
     @Consumes({MediaType.APPLICATION_JSON})
     public Response addTagByBody(@PathParam("id") Long id, String rawBody) throws Exception {
         if (rawBody == null || rawBody.isBlank()) {
@@ -232,8 +298,13 @@ public class PublicationService {
     }
     
     @DELETE
+    @Authenticated
     @Path("/{id}/tags/{tagId}")
     public Response removeTag(@PathParam("id") Long id, @PathParam("tagId") Long tagId) throws Exception {
+        // only responsible or admin may remove tags from publications
+        if (!(securityContext.isUserInRole("RESPONSAVEL") || securityContext.isUserInRole("ADMINISTRADOR"))) {
+            throw new ForbiddenException("Insufficient permissions to remove tag");
+        }
         publicationBean.removeTag(id, tagId);
         return Response.ok(Map.of("message", "Tag removida da publicação com sucesso")).build();
     }
@@ -264,15 +335,25 @@ public class PublicationService {
     }
     
     @PATCH
+    @Authenticated
     @Path("/{id}/visibility")
     public Response setVisibility(@PathParam("id") Long id, PublicationDTO dto) throws Exception {
+        ensureAuthorOrResponsibleOrAdmin(id);
         publicationBean.setVisibility(id, dto.isVisible());
-        var resultDto = publicationBean.getDTOWithDetails(id);
-        return Response.ok(resultDto).build();
+        var pub = publicationBean.find(id);
+        var updatedAt = pub.getUpdatedAt() != null ? pub.getUpdatedAt().atOffset(java.time.ZoneOffset.UTC) : null;
+        var res = Map.of(
+            "id", pub.getId(),
+            "title", pub.getTitle(),
+            "visible", pub.isVisible(),
+            "updatedAt", updatedAt
+        );
+        return Response.ok(res).build();
     }
 
     // Spec typo compatibility: accept 'visiblity' path as well (PATCH may be unsupported by some servers)
     @POST
+    @Authenticated
     @Path("/{id}/visiblity")
     @Consumes({MediaType.APPLICATION_JSON})
     public Response setVisibilitySpec(@PathParam("id") Long id, String rawBody) throws Exception {
@@ -294,7 +375,15 @@ public class PublicationService {
         if (v instanceof Boolean) visible = (Boolean) v;
         else visible = Boolean.parseBoolean(v.toString());
         publicationBean.setVisibility(id, visible);
-        var resultDto = publicationBean.getDTOWithDetails(id);
-        return Response.ok(resultDto).build();
+        ensureAuthorOrResponsibleOrAdmin(id);
+        var pub = publicationBean.find(id);
+        var updatedAt = pub.getUpdatedAt() != null ? pub.getUpdatedAt().atOffset(java.time.ZoneOffset.UTC) : null;
+        var res = Map.of(
+            "id", pub.getId(),
+            "title", pub.getTitle(),
+            "visible", pub.isVisible(),
+            "updatedAt", updatedAt
+        );
+        return Response.ok(res).build();
     }
 }
