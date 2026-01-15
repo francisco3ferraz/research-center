@@ -1,8 +1,14 @@
 package pt.ipleiria.dei.ei.estg.researchcenter.ws;
 
+import java.util.Map;
 import jakarta.ejb.EJB;
 import jakarta.validation.Valid;
-import jakarta.ws.rs.*;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -14,9 +20,6 @@ import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.UserBean;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.User;
 import pt.ipleiria.dei.ei.estg.researchcenter.security.Authenticated;
 import pt.ipleiria.dei.ei.estg.researchcenter.security.TokenIssuer;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @Path("auth")
 @Produces({MediaType.APPLICATION_JSON})
@@ -33,7 +36,7 @@ public class AuthService {
     public Response authenticate(@Valid AuthDTO auth) {
         if (userBean.canLogin(auth.getUsername(), auth.getPassword())) {
             String token = TokenIssuer.issue(auth.getUsername());
-            return Response.ok(token).build();
+            return Response.ok(Map.of("token", token)).build();
         }
         return Response.status(Response.Status.UNAUTHORIZED).build();
     }

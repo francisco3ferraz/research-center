@@ -1,39 +1,51 @@
 package pt.ipleiria.dei.ei.estg.researchcenter.ws;
 
 import jakarta.ejb.EJB;
-import jakarta.ws.rs.*;
-import jakarta.ws.rs.core.MediaType;
-import jakarta.ws.rs.core.Response;
-import org.jboss.resteasy.plugins.providers.multipart.InputPart;
-import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
-import pt.ipleiria.dei.ei.estg.researchcenter.dtos.PublicationDTO;
-import pt.ipleiria.dei.ei.estg.researchcenter.dtos.TagDTO;
-import pt.ipleiria.dei.ei.estg.researchcenter.security.Authenticated;
-import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.DocumentBean;
-import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.PublicationBean;
-import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.CollaboratorBean;
-
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.annotation.security.RolesAllowed;
+import jakarta.ejb.EJB;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DELETE;
+import jakarta.ws.rs.DefaultValue;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.PATCH;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
+import jakarta.ws.rs.core.Context;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.StreamingOutput;
+import jakarta.ws.rs.ForbiddenException;
+import jakarta.ws.rs.core.SecurityContext;
+
+import org.jboss.resteasy.plugins.providers.multipart.InputPart;
+import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
-import java.util.stream.Collectors;
-import pt.ipleiria.dei.ei.estg.researchcenter.entities.Publication;
-import jakarta.ws.rs.core.StreamingOutput;
-import jakarta.ws.rs.ForbiddenException;
-import jakarta.annotation.security.RolesAllowed;
-import jakarta.ws.rs.core.Context;
+
+import pt.ipleiria.dei.ei.estg.researchcenter.dtos.PublicationDTO;
+import pt.ipleiria.dei.ei.estg.researchcenter.dtos.TagDTO;
+import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.CollaboratorBean;
+import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.DocumentBean;
+import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.PublicationBean;
+import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.UserBean;
+import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
+import pt.ipleiria.dei.ei.estg.researchcenter.security.Authenticated;
 import pt.ipleiria.dei.ei.estg.researchcenter.security.RequireOwnership;
 
-@Path("publications")
-@Produces({MediaType.APPLICATION_JSON})
 @Consumes({MediaType.APPLICATION_JSON})
 public class PublicationService {
     
@@ -44,9 +56,9 @@ public class PublicationService {
     @EJB
     private CollaboratorBean collaboratorBean;
     @EJB
-    private pt.ipleiria.dei.ei.estg.researchcenter.ejbs.UserBean userBean;
+    private UserBean userBean;
     @Context
-    private jakarta.ws.rs.core.SecurityContext securityContext;
+    private SecurityContext securityContext;
 
     private void ensureAuthorOrResponsibleOrAdmin(Long publicationId) throws Exception {
         var pub = publicationBean.find(publicationId);
@@ -71,8 +83,14 @@ public class PublicationService {
         java.time.LocalDateTime dateFrom = null;
         java.time.LocalDateTime dateTo = null;
         try {
-            if (dateFromStr != null && !dateFromStr.isBlank()) dateFrom = java.time.LocalDateTime.parse(dateFromStr);
-            if (dateToStr != null && !dateToStr.isBlank()) dateTo = java.time.LocalDateTime.parse(dateToStr);
+            if (dateFromStr != null && !dateFromStr.isBlank()) {
+                var odt = java.time.OffsetDateTime.parse(dateFromStr);
+                dateFrom = odt.withOffsetSameInstant(java.time.ZoneOffset.UTC).toLocalDateTime();
+            }
+            if (dateToStr != null && !dateToStr.isBlank()) {
+                var odt2 = java.time.OffsetDateTime.parse(dateToStr);
+                dateTo = odt2.withOffsetSameInstant(java.time.ZoneOffset.UTC).toLocalDateTime();
+            }
         } catch (Exception ex) {
             // ignore parse errors and treat as null
         }
@@ -129,14 +147,14 @@ public class PublicationService {
         try {
             var uploader = collaboratorBean.findByUsername(username);
             uploaderId = uploader.getId();
-        } catch (pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException ex) {
+        } catch (MyEntityNotFoundException ex) {
             if (securityContext.isUserInRole("ADMINISTRADOR")) {
                 // Do not attempt to create a Collaborator with the same username (single-table users).
                 // Use the system collaborator as fallback if present, otherwise leave null.
                 try {
                     var sys = collaboratorBean.findByUsername("system");
                     uploaderId = sys.getId();
-                } catch (pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException e) {
+                } catch (MyEntityNotFoundException e) {
                     uploaderId = null;
                 }
             } else {
@@ -202,12 +220,12 @@ public class PublicationService {
         try {
             var uploader = collaboratorBean.findByUsername(username);
             uploaderId = uploader.getId();
-        } catch (pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException ex) {
+        } catch (MyEntityNotFoundException ex) {
             if (securityContext.isUserInRole("ADMINISTRADOR")) {
                 try {
                     var sys = collaboratorBean.findByUsername("system");
                     uploaderId = sys.getId();
-                } catch (pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException e) {
+                } catch (MyEntityNotFoundException e) {
                     uploaderId = null;
                 }
             } else {
