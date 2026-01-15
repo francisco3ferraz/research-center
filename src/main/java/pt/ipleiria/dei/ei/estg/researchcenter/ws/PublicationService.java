@@ -28,7 +28,9 @@ import java.util.stream.Collectors;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.Publication;
 import jakarta.ws.rs.core.StreamingOutput;
 import jakarta.ws.rs.ForbiddenException;
+import jakarta.annotation.security.RolesAllowed;
 import jakarta.ws.rs.core.Context;
+import pt.ipleiria.dei.ei.estg.researchcenter.security.RequireOwnership;
 
 @Path("publications")
 @Produces({MediaType.APPLICATION_JSON})
@@ -41,6 +43,8 @@ public class PublicationService {
     private DocumentBean documentBean;
     @EJB
     private CollaboratorBean collaboratorBean;
+    @EJB
+    private pt.ipleiria.dei.ei.estg.researchcenter.ejbs.UserBean userBean;
     @Context
     private jakarta.ws.rs.core.SecurityContext securityContext;
 
@@ -121,7 +125,25 @@ public class PublicationService {
         // Use authenticated user as uploader
         String username = securityContext.getUserPrincipal() != null ? securityContext.getUserPrincipal().getName() : null;
         if (username == null) throw new jakarta.ws.rs.NotAuthorizedException("Authentication required");
-        var uploader = collaboratorBean.findByUsername(username);
+        Long uploaderId = null;
+        try {
+            var uploader = collaboratorBean.findByUsername(username);
+            uploaderId = uploader.getId();
+        } catch (pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException ex) {
+            if (securityContext.isUserInRole("ADMINISTRADOR")) {
+                // Do not attempt to create a Collaborator with the same username (single-table users).
+                // Use the system collaborator as fallback if present, otherwise leave null.
+                try {
+                    var sys = collaboratorBean.findByUsername("system");
+                    uploaderId = sys.getId();
+                } catch (pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException e) {
+                    uploaderId = null;
+                }
+            } else {
+                throw ex;
+            }
+        }
+
         var publication = publicationBean.create(
             dto.getTitle(),
             dto.getAuthors(),
@@ -129,7 +151,7 @@ public class PublicationService {
             dto.getAreaScientific(),
             dto.getYear(),
             dto.getAbstract_(),
-            uploader.getId()
+            uploaderId
         );
         
         // Set optional fields if provided
@@ -176,7 +198,22 @@ public class PublicationService {
 
         String username = securityContext.getUserPrincipal() != null ? securityContext.getUserPrincipal().getName() : null;
         if (username == null) throw new jakarta.ws.rs.NotAuthorizedException("Authentication required");
-        var uploader = collaboratorBean.findByUsername(username);
+        Long uploaderId = null;
+        try {
+            var uploader = collaboratorBean.findByUsername(username);
+            uploaderId = uploader.getId();
+        } catch (pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException ex) {
+            if (securityContext.isUserInRole("ADMINISTRADOR")) {
+                try {
+                    var sys = collaboratorBean.findByUsername("system");
+                    uploaderId = sys.getId();
+                } catch (pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException e) {
+                    uploaderId = null;
+                }
+            } else {
+                throw ex;
+            }
+        }
 
         var publication = publicationBean.create(
             dto.getTitle(),
@@ -185,7 +222,7 @@ public class PublicationService {
             dto.getAreaScientific(),
             dto.getYear(),
             dto.getAbstract_(),
-            uploader.getId()
+            uploaderId
         );
 
         if (dto.getPublisher() != null || dto.getDoi() != null || dto.getAiGeneratedSummary() != null) {
@@ -234,9 +271,10 @@ public class PublicationService {
     
     @PUT
     @Authenticated
+    @RequireOwnership(parameterName = "id", bypassRoles = {"RESPONSAVEL","ADMINISTRADOR"})
     @Path("/{id}")
     public Response update(@PathParam("id") Long id, PublicationDTO dto) throws Exception {
-        ensureAuthorOrResponsibleOrAdmin(id);
+        
         publicationBean.update(
             id,
             dto.getTitle(),
@@ -253,9 +291,10 @@ public class PublicationService {
     
     @DELETE
     @Authenticated
+    @RequireOwnership(parameterName = "id", bypassRoles = {"RESPONSAVEL","ADMINISTRADOR"})
     @Path("/{id}")
     public Response delete(@PathParam("id") Long id) throws Exception {
-        ensureAuthorOrResponsibleOrAdmin(id);
+        
         publicationBean.delete(id);
         return Response.ok(Map.of("message", "Publicação removida com sucesso")).build();
     }
@@ -299,12 +338,9 @@ public class PublicationService {
     
     @DELETE
     @Authenticated
+    @RolesAllowed({"RESPONSAVEL","ADMINISTRADOR"})
     @Path("/{id}/tags/{tagId}")
     public Response removeTag(@PathParam("id") Long id, @PathParam("tagId") Long tagId) throws Exception {
-        // only responsible or admin may remove tags from publications
-        if (!(securityContext.isUserInRole("RESPONSAVEL") || securityContext.isUserInRole("ADMINISTRADOR"))) {
-            throw new ForbiddenException("Insufficient permissions to remove tag");
-        }
         publicationBean.removeTag(id, tagId);
         return Response.ok(Map.of("message", "Tag removida da publicação com sucesso")).build();
     }
@@ -336,9 +372,9 @@ public class PublicationService {
     
     @PATCH
     @Authenticated
+    @RequireOwnership(parameterName = "id", bypassRoles = {"RESPONSAVEL","ADMINISTRADOR"})
     @Path("/{id}/visibility")
     public Response setVisibility(@PathParam("id") Long id, PublicationDTO dto) throws Exception {
-        ensureAuthorOrResponsibleOrAdmin(id);
         publicationBean.setVisibility(id, dto.isVisible());
         var pub = publicationBean.find(id);
         var updatedAt = pub.getUpdatedAt() != null ? pub.getUpdatedAt().atOffset(java.time.ZoneOffset.UTC) : null;
@@ -375,7 +411,6 @@ public class PublicationService {
         if (v instanceof Boolean) visible = (Boolean) v;
         else visible = Boolean.parseBoolean(v.toString());
         publicationBean.setVisibility(id, visible);
-        ensureAuthorOrResponsibleOrAdmin(id);
         var pub = publicationBean.find(id);
         var updatedAt = pub.getUpdatedAt() != null ? pub.getUpdatedAt().atOffset(java.time.ZoneOffset.UTC) : null;
         var res = Map.of(

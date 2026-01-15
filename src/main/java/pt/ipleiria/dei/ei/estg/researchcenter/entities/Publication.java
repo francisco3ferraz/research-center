@@ -66,7 +66,6 @@ public class Publication implements Serializable {
     
     @ManyToOne
     @JoinColumn(name = "uploaded_by_id")
-    @NotNull
     private Collaborator uploadedBy;
 
     @ManyToOne

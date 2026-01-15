@@ -14,6 +14,7 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import jakarta.ws.rs.ext.Provider;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.UserBean;
+import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.PublicationBean;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -37,6 +38,9 @@ public class AuthorizationFilter implements ContainerRequestFilter {
 
     @EJB
     private UserBean userBean;
+
+    @EJB
+    private PublicationBean publicationBean;
 
     @Override
     public void filter(ContainerRequestContext requestContext) {
@@ -151,8 +155,27 @@ public class AuthorizationFilter implements ContainerRequestFilter {
                 .getPathParameters()
                 .getFirst(annotation.parameterName());
 
-        // Check if authenticated user matches the parameter
-        return username != null && username.equals(paramValue);
+        if (paramValue == null) return false;
+
+        // If parameter looks like a numeric id, try to resolve a publication owner
+        try {
+            long id = Long.parseLong(paramValue);
+            try {
+                var pub = publicationBean.find(id);
+                var owner = pub.getUploadedBy();
+                if (owner != null) {
+                    return username != null && username.equals(owner.getUsername());
+                } else {
+                    // No owner set on publication
+                    return false;
+                }
+            } catch (Exception e) {
+                return false;
+            }
+        } catch (NumberFormatException nfe) {
+            // Not a numeric id, fallback to username equality check
+            return username != null && username.equals(paramValue);
+        }
     }
 
     private boolean checkPermissions(Method method, Class<?> resourceClass) {

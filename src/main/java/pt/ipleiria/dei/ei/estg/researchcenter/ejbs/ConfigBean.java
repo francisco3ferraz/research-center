@@ -66,6 +66,18 @@ public class ConfigBean {
             var manuel = collaboratorBean.create("manuel", "manuel123", "Manuel C", "manuel@research.pt");
             var ana = collaboratorBean.create("ana", "ana123", "Ana D", "ana@research.pt");
             logger.info("Collaborators created");
+
+            // Ensure a system collaborator exists to be used as a fallback uploader
+            try {
+                collaboratorBean.findByUsername("system");
+            } catch (pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException e) {
+                try {
+                    collaboratorBean.create("system", "system", "System", "system@research.pt");
+                    logger.info("System collaborator created");
+                } catch (Exception ex) {
+                    logger.warning("Could not create system collaborator: " + ex.getMessage());
+                }
+            }
             
             // Create Publications
             var pub1 = publicationBean.create(

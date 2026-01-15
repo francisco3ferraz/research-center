@@ -31,16 +31,17 @@ public class PublicationBean {
                              String areaScientific, Integer year, String abstract_,
                              Long uploadedById)
             throws MyEntityNotFoundException, MyConstraintViolationException {
-        
-        var uploadedBy = collaboratorBean.find(uploadedById);
-        
+        var uploadedBy = uploadedById != null ? collaboratorBean.find(uploadedById) : null;
+
         try {
             var publication = new Publication(title, authors, type, areaScientific, year, abstract_, uploadedBy);
             em.persist(publication);
             em.flush();
-            
-            uploadedBy.addPublication(publication);
-            
+
+            if (uploadedBy != null) {
+                uploadedBy.addPublication(publication);
+            }
+
             return publication;
         } catch (ConstraintViolationException e) {
             throw new MyConstraintViolationException(e);
