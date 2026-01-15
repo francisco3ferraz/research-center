@@ -10,7 +10,6 @@ import pt.ipleiria.dei.ei.estg.researchcenter.dtos.CollaboratorDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import jakarta.json.bind.annotation.JsonbProperty;
-import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class PublicationDTO implements Serializable {
     
@@ -23,7 +22,6 @@ public class PublicationDTO implements Serializable {
     private String publisher;
     private String doi;
     @JsonbProperty("abstract")
-    @JsonProperty("abstract")
     private String abstract_;
     private String aiGeneratedSummary;
     private boolean visible;
