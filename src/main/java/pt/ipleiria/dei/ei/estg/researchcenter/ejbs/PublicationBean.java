@@ -10,6 +10,7 @@ import pt.ipleiria.dei.ei.estg.researchcenter.entities.Publication;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.PublicationType;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyConstraintViolationException;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
+import pt.ipleiria.dei.ei.estg.researchcenter.dtos.PublicationDTO;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -44,6 +45,11 @@ public class PublicationBean {
         } catch (ConstraintViolationException e) {
             throw new MyConstraintViolationException(e);
         }
+    }
+
+    public PublicationDTO getDTOWithDetails(Long id) throws MyEntityNotFoundException {
+        var publication = findWithDetails(id);
+        return PublicationDTO.fromWithDetails(publication);
     }
     
     public Publication find(Long id) throws MyEntityNotFoundException {

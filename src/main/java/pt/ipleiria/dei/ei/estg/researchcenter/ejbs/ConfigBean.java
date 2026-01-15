@@ -55,10 +55,10 @@ public class ConfigBean {
             logger.info("Tags created");
             
             // Create Users
-            var admin = administratorBean.create("admin", "admin123", "Administrator User", "admin@research.pt");
+            var admin = administratorBean.create("admin", "admin", "Administrator User", "admin@research.pt");
             logger.info("Administrator created with ID: " + admin.getId());
             
-            var manager = managerBean.create("manager1", "manager123", "Maria Manager", "maria@research.pt");
+            var manager = managerBean.create("manager1", "manager", "Maria Manager", "maria@research.pt");
             logger.info("Manager created with ID: " + manager.getId());
             
             var joao = collaboratorBean.create("joao", "joao123", "João A", "joao@research.pt");

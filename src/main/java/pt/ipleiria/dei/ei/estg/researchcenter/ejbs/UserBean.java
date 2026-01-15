@@ -35,4 +35,20 @@ public class UserBean {
         // TODO: In production, use Hasher.verify(password, user.getPassword())
         return user != null && user.getPassword().equals(password) && user.isActive();
     }
+
+    public boolean changePassword(String username, String oldPassword, String newPassword) {
+        var user = findByUsername(username);
+        if (user == null) return false;
+        if (!user.getPassword().equals(oldPassword)) return false;
+        user.setPassword(newPassword);
+        em.merge(user);
+        return true;
+    }
+
+    public boolean userHasPermission(String username, String permission) {
+        var user = findByUsername(username);
+        if (user == null) return false;
+        // Simple permission model: administrators have all permissions
+        return user.getRole() != null && user.getRole().name().equals("ADMINISTRADOR");
+    }
 }

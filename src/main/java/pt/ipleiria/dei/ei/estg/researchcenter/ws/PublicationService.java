@@ -16,8 +16,15 @@ import jakarta.json.bind.JsonbBuilder;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
+import java.util.stream.Collectors;
+import pt.ipleiria.dei.ei.estg.researchcenter.entities.Publication;
+import jakarta.ws.rs.core.StreamingOutput;
 
 @Path("publications")
 @Produces({MediaType.APPLICATION_JSON})
@@ -30,17 +37,24 @@ public class PublicationService {
     private DocumentBean documentBean;
     
     @GET
-    @Path("/")
     public Response getAll() {
         var publications = publicationBean.findAll();
-        return Response.ok(PublicationDTO.from(publications)).build();
+        List<Publication> full = new ArrayList<>();
+        for (Publication p : publications) {
+            try {
+                full.add(publicationBean.findWithDetails(p.getId()));
+            } catch (Exception e) {
+                // skip if cannot load details for a publication
+            }
+        }
+        return Response.ok(PublicationDTO.from(full)).build();
     }
     
     @GET
     @Path("/{id}")
     public Response get(@PathParam("id") Long id) throws Exception {
-        var publication = publicationBean.findWithDetails(id);
-        return Response.ok(PublicationDTO.fromWithDetails(publication)).build();
+        var dto = publicationBean.getDTOWithDetails(id);
+        return Response.ok(dto).build();
     }
     
     @GET
@@ -65,7 +79,6 @@ public class PublicationService {
     }
     
     @POST
-    @Path("/")
     public Response create(PublicationDTO dto) throws Exception {
         var publication = publicationBean.create(
             dto.getTitle(),
@@ -97,7 +110,7 @@ public class PublicationService {
     }
 
     @POST
-    @Path("/")
+    @Path("/upload")
     @Consumes({MediaType.MULTIPART_FORM_DATA})
     public Response createMultipart(MultipartFormDataInput input) throws Exception {
         Map<String, List<InputPart>> form = input.getFormDataMap();
@@ -172,8 +185,8 @@ public class PublicationService {
             dto.getPublisher(),
             dto.getDoi()
         );
-        var publication = publicationBean.find(id);
-        return Response.ok(PublicationDTO.from(publication)).build();
+        var resultDto = publicationBean.getDTOWithDetails(id);
+        return Response.ok(resultDto).build();
     }
     
     @DELETE
@@ -187,14 +200,25 @@ public class PublicationService {
     @Path("/{id}/tags/{tagId}")
     public Response addTag(@PathParam("id") Long id, @PathParam("tagId") Long tagId) throws Exception {
         publicationBean.addTag(id, tagId);
-        var publication = publicationBean.findWithDetails(id);
-        return Response.ok(PublicationDTO.fromWithDetails(publication)).build();
+        var resultDto = publicationBean.getDTOWithDetails(id);
+        return Response.ok(resultDto).build();
     }
 
     // Spec-compliant: accept JSON body { "tagId": 5 }
     @POST
     @Path("/{id}/tags")
-    public Response addTagByBody(@PathParam("id") Long id, Map<String, Object> body) throws Exception {
+    @Consumes({MediaType.APPLICATION_JSON})
+    public Response addTagByBody(@PathParam("id") Long id, String rawBody) throws Exception {
+        if (rawBody == null || rawBody.isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("message", "tagId required")).build();
+        }
+        Jsonb jsonb = JsonbBuilder.create();
+        Map<?,?> body = null;
+        try {
+            body = jsonb.fromJson(rawBody, Map.class);
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("message", "invalid json" , "error", e.getMessage())).build();
+        }
         if (body == null || !body.containsKey("tagId")) {
             return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("message", "tagId required")).build();
         }
@@ -213,12 +237,64 @@ public class PublicationService {
         publicationBean.removeTag(id, tagId);
         return Response.ok(Map.of("message", "Tag removida da publicação com sucesso")).build();
     }
+
+    @GET
+    @Path("/{id}/file")
+    @Produces({MediaType.APPLICATION_OCTET_STREAM})
+    public Response downloadFile(@PathParam("id") Long id) throws Exception {
+        var document = documentBean.findByPublication(id);
+        java.nio.file.Path path = Paths.get(document.getFilepath());
+        if (!Files.exists(path)) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
+        StreamingOutput stream = output -> {
+            try (InputStream in = Files.newInputStream(path)) {
+                byte[] buffer = new byte[8192];
+                int len;
+                while ((len = in.read(buffer)) != -1) {
+                    output.write(buffer, 0, len);
+                }
+            }
+        };
+
+        return Response.ok(stream)
+                       .header("Content-Disposition", "attachment; filename=\"" + document.getFilename() + "\"")
+                       .build();
+    }
     
     @PATCH
     @Path("/{id}/visibility")
     public Response setVisibility(@PathParam("id") Long id, PublicationDTO dto) throws Exception {
         publicationBean.setVisibility(id, dto.isVisible());
-        var publication = publicationBean.find(id);
-        return Response.ok(PublicationDTO.from(publication)).build();
+        var resultDto = publicationBean.getDTOWithDetails(id);
+        return Response.ok(resultDto).build();
+    }
+
+    // Spec typo compatibility: accept 'visiblity' path as well (PATCH may be unsupported by some servers)
+    @POST
+    @Path("/{id}/visiblity")
+    @Consumes({MediaType.APPLICATION_JSON})
+    public Response setVisibilitySpec(@PathParam("id") Long id, String rawBody) throws Exception {
+        if (rawBody == null || rawBody.isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("message", "visible required")).build();
+        }
+        Jsonb jsonb = JsonbBuilder.create();
+        Map<?,?> body = null;
+        try {
+            body = jsonb.fromJson(rawBody, Map.class);
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("message", "invalid json", "error", e.getMessage())).build();
+        }
+        if (body == null || !body.containsKey("visible")) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("message", "visible required")).build();
+        }
+        boolean visible = false;
+        Object v = body.get("visible");
+        if (v instanceof Boolean) visible = (Boolean) v;
+        else visible = Boolean.parseBoolean(v.toString());
+        publicationBean.setVisibility(id, visible);
+        var resultDto = publicationBean.getDTOWithDetails(id);
+        return Response.ok(resultDto).build();
     }
 }
