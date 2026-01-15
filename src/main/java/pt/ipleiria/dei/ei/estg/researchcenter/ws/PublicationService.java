@@ -38,14 +38,19 @@ import java.util.Map;
 
 import pt.ipleiria.dei.ei.estg.researchcenter.dtos.PublicationDTO;
 import pt.ipleiria.dei.ei.estg.researchcenter.dtos.TagDTO;
+import pt.ipleiria.dei.ei.estg.researchcenter.entities.Publication;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.CollaboratorBean;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.DocumentBean;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.PublicationBean;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.UserBean;
+import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.ActivityLogBean;
+import pt.ipleiria.dei.ei.estg.researchcenter.dtos.ActivityLogDTO;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
 import pt.ipleiria.dei.ei.estg.researchcenter.security.Authenticated;
 import pt.ipleiria.dei.ei.estg.researchcenter.security.RequireOwnership;
 
+@Path("publications")
+@Produces({MediaType.APPLICATION_JSON})
 @Consumes({MediaType.APPLICATION_JSON})
 public class PublicationService {
     
@@ -55,6 +60,8 @@ public class PublicationService {
     private DocumentBean documentBean;
     @EJB
     private CollaboratorBean collaboratorBean;
+    @EJB
+    private ActivityLogBean activityLogBean;
     @EJB
     private UserBean userBean;
     @Context
@@ -135,6 +142,63 @@ public class PublicationService {
     public Response getByTag(@PathParam("tagId") Long tagId) throws Exception {
         var publications = publicationBean.findByTag(tagId);
         return Response.ok(PublicationDTO.from(publications)).build();
+    }
+
+    @GET
+    @Path("/my-publications")
+    @Authenticated
+    public Response getMyPublications(@QueryParam("page") @DefaultValue("0") int page,
+                                      @QueryParam("size") @DefaultValue("10") int size) throws Exception {
+        String username = securityContext.getUserPrincipal() != null ? securityContext.getUserPrincipal().getName() : null;
+        if (username == null) throw new jakarta.ws.rs.NotAuthorizedException("Authentication required");
+        Long collaboratorId = null;
+        try {
+            var coll = collaboratorBean.findByUsername(username);
+            collaboratorId = coll.getId();
+        } catch (MyEntityNotFoundException ex) {
+            // If admin without collaborator, return empty page
+            if (securityContext.isUserInRole("ADMINISTRADOR")) {
+                var empty = List.<Publication>of();
+                var content = PublicationDTO.from(empty);
+                var result = Map.of(
+                        "content", content,
+                        "totalElements", 0,
+                        "totalPages", 0,
+                        "currentPage", page,
+                        "pageSize", size
+                );
+                return Response.ok(result).build();
+            } else {
+                throw ex;
+            }
+        }
+
+        var pubs = publicationBean.findByUploadedBy(collaboratorId);
+        // Ensure lazy collections are initialized by loading details for each publication
+        var detailed = new java.util.ArrayList<Publication>();
+        for (var p : pubs) {
+            detailed.add(publicationBean.findWithDetails(p.getId()));
+        }
+        int total = detailed != null ? detailed.size() : 0;
+        List<Publication> pageList;
+        if (total == 0) pageList = List.of();
+        else if (size <= 0) pageList = detailed;
+        else {
+            int from = Math.max(0, page * size);
+            int to = Math.min(total, from + size);
+            pageList = from >= to ? List.of() : detailed.subList(from, to);
+        }
+
+        var content = PublicationDTO.from(pageList);
+        int totalPages = size > 0 ? (int) ((total + size - 1) / size) : 1;
+        var result = Map.of(
+                "content", content,
+                "totalElements", total,
+                "totalPages", totalPages,
+                "currentPage", page,
+                "pageSize", size
+        );
+        return Response.ok(result).build();
     }
     
     @POST
@@ -438,5 +502,13 @@ public class PublicationService {
             "updatedAt", updatedAt
         );
         return Response.ok(res).build();
+    }
+
+    @GET
+    @Path("/{id}/history")
+    @Authenticated
+    public Response getPublicationHistory(@PathParam("id") Long id) throws Exception {
+        var logs = activityLogBean.getPublicationHistory(id);
+        return Response.ok(ActivityLogDTO.from(logs)).build();
     }
 }

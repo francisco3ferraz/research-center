@@ -19,10 +19,6 @@ import pt.ipleiria.dei.ei.estg.researchcenter.security.Authenticated;
 
 import java.util.Map;
 
-/**
- * REST Web Service for User management.
- * Implements endpoints EP01 to EP08 from the API specification.
- */
 @Path("users")
 @Produces({MediaType.APPLICATION_JSON})
 @Consumes({MediaType.APPLICATION_JSON})
@@ -38,11 +34,6 @@ public class UserService {
     @Context
     private SecurityContext securityContext;
 
-    /**
-     * EP01 - Listar Utilizadores
-     * GET /api/users
-     * Requires: ADMINISTRADOR role
-     */
     @GET
     @RolesAllowed({"ADMINISTRADOR"})
     public Response getAll() {
@@ -50,11 +41,6 @@ public class UserService {
         return Response.ok(UserDTO.from(users)).build();
     }
 
-    /**
-     * EP02 - Consultar Utilizador
-     * GET /api/users/{id}
-     * Any authenticated user can view user details
-     */
     @GET
     @Path("/{id}")
     public Response get(@PathParam("id") Long id) throws MyEntityNotFoundException {
@@ -62,11 +48,6 @@ public class UserService {
         return Response.ok(UserDTO.from(user)).build();
     }
 
-    /**
-     * EP03 - Criar Utilizador
-     * POST /api/users
-     * Requires: ADMINISTRADOR role
-     */
     @POST
     @RolesAllowed({"ADMINISTRADOR"})
     public Response create(UserDTO dto) throws MyEntityExistsException, MyConstraintViolationException {
@@ -96,11 +77,6 @@ public class UserService {
                 .build();
     }
 
-    /**
-     * EP04 - Editar Utilizador
-     * PUT /api/users/{id}
-     * Requires: ADMINISTRADOR role
-     */
     @PUT
     @Path("/{id}")
     @RolesAllowed({"ADMINISTRADOR"})
@@ -123,11 +99,6 @@ public class UserService {
         return Response.ok(UserDTO.from(user)).build();
     }
 
-    /**
-     * EP05 - Ativar/Desativar Utilizador
-     * PATCH /api/users/{id}/status
-     * Requires: ADMINISTRADOR role
-     */
     @PATCH
     @Path("/{id}/status")
     @RolesAllowed({"ADMINISTRADOR"})
@@ -136,11 +107,6 @@ public class UserService {
         return Response.ok(UserDTO.from(user)).build();
     }
 
-    /**
-     * EP06 - Remover Utilizador
-     * DELETE /api/users/{id}
-     * Requires: ADMINISTRADOR role
-     */
     @DELETE
     @Path("/{id}")
     @RolesAllowed({"ADMINISTRADOR"})
@@ -149,11 +115,6 @@ public class UserService {
         return Response.ok(Map.of("message", "Utilizador removido com sucesso")).build();
     }
 
-    /**
-     * EP07 - Editar Perfil Próprio
-     * PUT /api/users/profile
-     * Any authenticated user can edit their own profile
-     */
     @PUT
     @Path("/profile")
     public Response updateProfile(UserDTO dto) throws MyEntityNotFoundException, MyConstraintViolationException {
@@ -164,11 +125,6 @@ public class UserService {
         return Response.ok(UserDTO.from(user)).build();
     }
 
-    /**
-     * EP08 - Consultar histórico de atividade
-     * GET /api/users/{id}/activity
-     * User can view own activity, Admin can view any user's activity
-     */
     @GET
     @Path("/{id}/activity")
     public Response getActivity(@PathParam("id") Long id) throws MyEntityNotFoundException {
