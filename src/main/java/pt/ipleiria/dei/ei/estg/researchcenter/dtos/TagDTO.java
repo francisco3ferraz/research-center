@@ -4,6 +4,7 @@ package pt.ipleiria.dei.ei.estg.researchcenter.dtos;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.Tag;
 
 import java.io.Serializable;
+import jakarta.json.bind.annotation.JsonbProperty;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -11,6 +12,7 @@ public class TagDTO implements Serializable {
 
     private Long id;
     private String name;
+    @JsonbProperty("publicationsCount")
     private int publicationCount;
     private int subscriberCount;
 

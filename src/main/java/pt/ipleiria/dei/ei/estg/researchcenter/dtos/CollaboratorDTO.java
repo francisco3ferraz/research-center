@@ -3,15 +3,23 @@ package pt.ipleiria.dei.ei.estg.researchcenter.dtos;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.Collaborator;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import jakarta.json.bind.annotation.JsonbProperty;
 
 public class CollaboratorDTO implements Serializable {
 
+    private Long id;
     private String username;
     private String name;
     private String email;
     private boolean active;
+    private String role;
+    @JsonbProperty("createdAt")
+    private LocalDateTime createdAt;
+    @JsonbProperty("lastLogin")
+    private LocalDateTime lastLogin;
     private List<TagDTO> subscribedTags;
 
     // Default constructor
@@ -26,6 +34,18 @@ public class CollaboratorDTO implements Serializable {
         this.active = active;
     }
 
+    public CollaboratorDTO(Long id, String username, String name, String email, boolean active,
+                           String role, LocalDateTime createdAt, LocalDateTime lastLogin) {
+        this.id = id;
+        this.username = username;
+        this.name = name;
+        this.email = email;
+        this.active = active;
+        this.role = role;
+        this.createdAt = createdAt;
+        this.lastLogin = lastLogin;
+    }
+
     // Getters and Setters
     public String getUsername() {
         return username;
@@ -33,6 +53,38 @@ public class CollaboratorDTO implements Serializable {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getLastLogin() {
+        return lastLogin;
+    }
+
+    public void setLastLogin(LocalDateTime lastLogin) {
+        this.lastLogin = lastLogin;
     }
 
     public String getName() {
@@ -70,10 +122,14 @@ public class CollaboratorDTO implements Serializable {
     // Conversion methods
     public static CollaboratorDTO from(Collaborator collaborator) {
         return new CollaboratorDTO(
-                collaborator.getUsername(),
-                collaborator.getName(),
-                collaborator.getEmail(),
-                collaborator.isActive()
+            collaborator.getId(),
+            collaborator.getUsername(),
+            collaborator.getName(),
+            collaborator.getEmail(),
+            collaborator.isActive(),
+            collaborator.getRole() != null ? collaborator.getRole().name() : null,
+            collaborator.getCreatedAt(),
+            collaborator.getLastLogin()
         );
     }
 

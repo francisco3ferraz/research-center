@@ -7,6 +7,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import jakarta.json.bind.annotation.JsonbProperty;
 
 public class PublicationDTO implements Serializable {
     
@@ -18,6 +19,7 @@ public class PublicationDTO implements Serializable {
     private Integer year;
     private String publisher;
     private String doi;
+    @JsonbProperty("abstract")
     private String abstract_;
     private String aiGeneratedSummary;
     private boolean visible;
@@ -33,6 +35,7 @@ public class PublicationDTO implements Serializable {
     private int commentsCount;
     private Long documentId;
     private String documentFilename;
+    private String fileUrl;
     
     // Default constructor
     public PublicationDTO() {
@@ -241,6 +244,14 @@ public class PublicationDTO implements Serializable {
     public void setDocumentFilename(String documentFilename) {
         this.documentFilename = documentFilename;
     }
+
+    public String getFileUrl() {
+        return fileUrl;
+    }
+
+    public void setFileUrl(String fileUrl) {
+        this.fileUrl = fileUrl;
+    }
     
     // Conversion methods
     public static PublicationDTO from(Publication publication) {
@@ -270,6 +281,7 @@ public class PublicationDTO implements Serializable {
         if (publication.getDocument() != null) {
             dto.setDocumentId(publication.getDocument().getId());
             dto.setDocumentFilename(publication.getDocument().getFilename());
+            dto.setFileUrl("/api/publications/" + publication.getId() + "/file");
         }
         
         return dto;

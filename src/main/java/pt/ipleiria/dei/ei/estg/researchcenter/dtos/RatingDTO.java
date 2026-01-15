@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 public class RatingDTO implements Serializable {
 
     private Long id;
+    @jakarta.json.bind.annotation.JsonbProperty("value")
     private int stars;
     private String userUsername;
     private String userName;
