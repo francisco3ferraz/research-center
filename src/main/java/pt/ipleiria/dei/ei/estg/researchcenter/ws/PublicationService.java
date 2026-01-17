@@ -48,6 +48,8 @@ import pt.ipleiria.dei.ei.estg.researchcenter.dtos.ActivityLogDTO;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
 import pt.ipleiria.dei.ei.estg.researchcenter.security.Authenticated;
 import pt.ipleiria.dei.ei.estg.researchcenter.security.RequireOwnership;
+import pt.ipleiria.dei.ei.estg.researchcenter.dtos.RatingDTO;
+import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.RatingBean;
 
 @Path("publications")
 @Produces({MediaType.APPLICATION_JSON})
@@ -64,6 +66,8 @@ public class PublicationService {
     private ActivityLogBean activityLogBean;
     @EJB
     private UserBean userBean;
+    @EJB
+    private RatingBean ratingBean;
     @Context
     private SecurityContext securityContext;
 
@@ -451,28 +455,11 @@ public class PublicationService {
                        .header("Content-Disposition", "attachment; filename=\"" + document.getFilename() + "\"")
                        .build();
     }
-    
-    @PATCH
-    @Authenticated
-    @RequireOwnership(parameterName = "id", bypassRoles = {"RESPONSAVEL","ADMINISTRADOR"})
-    @Path("/{id}/visibility")
-    public Response setVisibility(@PathParam("id") Long id, PublicationDTO dto) throws Exception {
-        publicationBean.setVisibility(id, dto.isVisible());
-        var pub = publicationBean.find(id);
-        var updatedAt = pub.getUpdatedAt() != null ? pub.getUpdatedAt().atOffset(java.time.ZoneOffset.UTC) : null;
-        var res = Map.of(
-            "id", pub.getId(),
-            "title", pub.getTitle(),
-            "visible", pub.isVisible(),
-            "updatedAt", updatedAt
-        );
-        return Response.ok(res).build();
-    }
 
     // Spec typo compatibility: accept 'visiblity' path as well (PATCH may be unsupported by some servers)
     @POST
     @Authenticated
-    @Path("/{id}/visiblity")
+    @Path("/{id}/visibility")
     @Consumes({MediaType.APPLICATION_JSON})
     public Response setVisibilitySpec(@PathParam("id") Long id, String rawBody) throws Exception {
         if (rawBody == null || rawBody.isBlank()) {
@@ -557,5 +544,63 @@ public class PublicationService {
     public Response getComments(@PathParam("id") Long id) throws Exception {
         var comments = commentBean.findByPublication(id);
         return Response.ok(pt.ipleiria.dei.ei.estg.researchcenter.dtos.CommentDTO.from(comments)).build();
+    }
+
+    // Ratings endpoints
+    @POST
+    @Path("/{id}/ratings")
+    @Authenticated
+    public Response addRating(@PathParam("id") Long id, String rawBody) throws Exception {
+        if (rawBody == null || rawBody.isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("message", "value required")).build();
+        }
+
+        Jsonb jsonb = JsonbBuilder.create();
+        Map<?, ?> body;
+        try {
+            body = jsonb.fromJson(rawBody, Map.class);
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("message", "invalid json", "error", e.getMessage())).build();
+        }
+
+        if (body == null || !body.containsKey("value")) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("message", "value required")).build();
+        }
+
+        int value;
+        Object v = body.get("value");
+        if (v instanceof Number) value = ((Number) v).intValue();
+        else {
+            try { value = Integer.parseInt(v.toString()); } catch (Exception e) { return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("message", "invalid value" , "error", e.getMessage())).build(); }
+        }
+
+        if (value < 1 || value > 5) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("message", "value must be between 1 and 5")).build();
+        }
+
+        String username = securityContext.getUserPrincipal() != null ? securityContext.getUserPrincipal().getName() : null;
+        if (username == null) throw new jakarta.ws.rs.NotAuthorizedException("Authentication required");
+        var author = collaboratorBean.findByUsername(username);
+
+        var rating = ratingBean.create(value, author.getId(), id);
+        return Response.status(Response.Status.CREATED).entity(RatingDTO.from(rating)).build();
+    }
+
+    @GET
+    @Path("/{id}/ratings")
+    public Response getRatings(@PathParam("id") Long id) throws Exception {
+        var ratings = ratingBean.findByPublication(id);
+        return Response.ok(RatingDTO.from(ratings)).build();
+    }
+
+    @DELETE
+    @Path("/{id}/ratings")
+    @Authenticated
+    public Response removeRating(@PathParam("id") Long id) throws Exception {
+        String username = securityContext.getUserPrincipal() != null ? securityContext.getUserPrincipal().getName() : null;
+        if (username == null) throw new jakarta.ws.rs.NotAuthorizedException("Authentication required");
+        var user = collaboratorBean.findByUsername(username);
+        ratingBean.deleteByUserAndPublication(user.getId(), id);
+        return Response.ok(Map.of("message", "Avaliação removida com sucesso")).build();
     }
 }
