@@ -531,7 +531,16 @@ public class PublicationService {
 
         String content = body.get("content").toString();
         String username = securityContext.getUserPrincipal().getName();
-        var author = collaboratorBean.findByUsername(username);
+        
+        // Try to find the collaborator - only collaborators can add comments
+        pt.ipleiria.dei.ei.estg.researchcenter.entities.Collaborator author;
+        try {
+            author = collaboratorBean.findByUsername(username);
+        } catch (MyEntityNotFoundException e) {
+            return Response.status(Response.Status.FORBIDDEN)
+                    .entity(Map.of("message", "Apenas colaboradores podem adicionar comentários. O utilizador '" + username + "' não é um colaborador."))
+                    .build();
+        }
 
         var comment = commentBean.create(content, author.getId(), id);
         return Response.status(Response.Status.CREATED)

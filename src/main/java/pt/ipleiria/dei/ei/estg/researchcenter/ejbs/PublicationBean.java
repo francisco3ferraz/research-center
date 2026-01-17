@@ -27,6 +27,9 @@ public class PublicationBean {
     @EJB
     private TagBean tagBean;
     
+    @EJB
+    private NotificationBean notificationBean;
+    
     public Publication create(String title, List<String> authors, PublicationType type,
                              String areaScientific, Integer year, String abstract_,
                              Long uploadedById)
@@ -238,6 +241,19 @@ public class PublicationBean {
         
         publication.addTag(tag);
         tag.addPublication(publication);
+        
+        // Notify subscribers of this tag about the new publication
+        String authorName = publication.getUploadedBy() != null 
+            ? publication.getUploadedBy().getName() 
+            : "Utilizador desconhecido";
+        notificationBean.notifyTagSubscribers(
+            tagId,
+            "NEW_PUBLICATION_WITH_TAG",
+            "Nova publicação na tag " + tag.getName(),
+            authorName + " adicionou uma nova publicação: '" + publication.getTitle() + "'",
+            "PUBLICATION",
+            publicationId
+        );
     }
     
     public void removeTag(Long publicationId, Long tagId) throws MyEntityNotFoundException {

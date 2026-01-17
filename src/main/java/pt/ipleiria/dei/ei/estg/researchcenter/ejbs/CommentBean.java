@@ -5,7 +5,9 @@ import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.validation.ConstraintViolationException;
+import org.hibernate.Hibernate;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.Comment;
+import pt.ipleiria.dei.ei.estg.researchcenter.entities.Tag;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyConstraintViolationException;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
 
@@ -24,6 +26,9 @@ public class CommentBean {
     @EJB
     private PublicationBean publicationBean;
     
+    @EJB
+    private NotificationBean notificationBean;
+    
     public Comment create(String text, Long authorId, Long publicationId)
             throws MyEntityNotFoundException, MyConstraintViolationException {
         
@@ -37,6 +42,23 @@ public class CommentBean {
             
             author.addComment(comment);
             publication.addComment(comment);
+            
+            // Notify subscribers of this publication's tags about the new comment
+            Hibernate.initialize(publication.getTags());
+            for (Tag tag : publication.getTags()) {
+                // Truncate comment text for notification message
+                String commentPreview = text.length() > 50 
+                    ? text.substring(0, 50) + "..." 
+                    : text;
+                notificationBean.notifyTagSubscribers(
+                    tag.getId(),
+                    "NEW_COMMENT_ON_TAG",
+                    "Novo comentário na tag " + tag.getName(),
+                    author.getName() + " comentou: '" + commentPreview + "'",
+                    "COMMENT",
+                    comment.getId()
+                );
+            }
             
             return comment;
         } catch (ConstraintViolationException e) {

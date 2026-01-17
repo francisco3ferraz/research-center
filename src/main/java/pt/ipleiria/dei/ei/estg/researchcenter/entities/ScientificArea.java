@@ -33,6 +33,9 @@ public class ScientificArea implements Serializable {
     @Column(unique = true)
     private String name;
 
+    @Column(length = 500)
+    private String description;
+
     @OneToMany(mappedBy = "area", cascade = CascadeType.REMOVE)
     private List<Publication> publications;
 
@@ -65,6 +68,14 @@ public class ScientificArea implements Serializable {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public List<Publication> getPublications() {
