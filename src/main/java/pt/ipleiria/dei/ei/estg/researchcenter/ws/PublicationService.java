@@ -511,4 +511,51 @@ public class PublicationService {
         var logs = activityLogBean.getPublicationHistory(id);
         return Response.ok(ActivityLogDTO.from(logs)).build();
     }
+
+    @EJB
+    private pt.ipleiria.dei.ei.estg.researchcenter.ejbs.CommentBean commentBean;
+
+    @POST
+    @Path("/{id}/comments")
+    @Authenticated
+    public Response addComment(@PathParam("id") Long id, String rawBody) throws Exception {
+        if (rawBody == null || rawBody.isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("message", "content required"))
+                    .build();
+        }
+
+        Jsonb jsonb = JsonbBuilder.create();
+        Map<?, ?> body;
+        try {
+            body = jsonb.fromJson(rawBody, Map.class);
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("message", "invalid json", "error", e.getMessage()))
+                    .build();
+        }
+
+        if (body == null || !body.containsKey("content") || body.get("content") == null
+                || body.get("content").toString().isBlank()) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("message", "content required"))
+                    .build();
+        }
+
+        String content = body.get("content").toString();
+        String username = securityContext.getUserPrincipal().getName();
+        var author = collaboratorBean.findByUsername(username);
+
+        var comment = commentBean.create(content, author.getId(), id);
+        return Response.status(Response.Status.CREATED)
+                .entity(pt.ipleiria.dei.ei.estg.researchcenter.dtos.CommentDTO.from(comment))
+                .build();
+    }
+
+    @GET
+    @Path("/{id}/comments")
+    public Response getComments(@PathParam("id") Long id) throws Exception {
+        var comments = commentBean.findByPublication(id);
+        return Response.ok(pt.ipleiria.dei.ei.estg.researchcenter.dtos.CommentDTO.from(comments)).build();
+    }
 }

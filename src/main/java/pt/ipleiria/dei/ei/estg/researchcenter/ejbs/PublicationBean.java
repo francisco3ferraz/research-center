@@ -83,19 +83,35 @@ public class PublicationBean {
     
     public List<Publication> findByUploadedBy(Long userId) throws MyEntityNotFoundException {
         var uploader = collaboratorBean.find(userId);
-        return em.createQuery(
+        var list = em.createQuery(
             "SELECT p FROM Publication p WHERE p.uploadedBy = :uploader ORDER BY p.uploadedAt DESC", 
             Publication.class)
             .setParameter("uploader", uploader)
             .getResultList();
+        // Initialize lazy collections to avoid LazyInitializationException
+        for (Publication p : list) {
+            Hibernate.initialize(p.getTags());
+            Hibernate.initialize(p.getComments());
+            Hibernate.initialize(p.getRatings());
+            Hibernate.initialize(p.getAuthors());
+        }
+        return list;
     }
     
     public List<Publication> findByAreaScientific(String areaScientific) {
-        return em.createQuery(
+        var list = em.createQuery(
             "SELECT p FROM Publication p WHERE p.areaScientific = :area AND p.visible = true ORDER BY p.uploadedAt DESC", 
             Publication.class)
             .setParameter("area", areaScientific)
             .getResultList();
+        // Initialize lazy collections to avoid LazyInitializationException
+        for (Publication p : list) {
+            Hibernate.initialize(p.getTags());
+            Hibernate.initialize(p.getComments());
+            Hibernate.initialize(p.getRatings());
+            Hibernate.initialize(p.getAuthors());
+        }
+        return list;
     }
 
     public List<Publication> findWithFilters(String search, String areaScientific, Long tagId,
@@ -157,19 +173,35 @@ public class PublicationBean {
     
     public List<Publication> findByTag(Long tagId) throws MyEntityNotFoundException {
         var tag = tagBean.find(tagId);
-        return em.createQuery(
+        var list = em.createQuery(
             "SELECT p FROM Publication p JOIN p.tags t WHERE t = :tag AND p.visible = true ORDER BY p.uploadedAt DESC",
             Publication.class)
             .setParameter("tag", tag)
             .getResultList();
+        // Initialize lazy collections to avoid LazyInitializationException
+        for (Publication p : list) {
+            Hibernate.initialize(p.getTags());
+            Hibernate.initialize(p.getComments());
+            Hibernate.initialize(p.getRatings());
+            Hibernate.initialize(p.getAuthors());
+        }
+        return list;
     }
     
     public List<Publication> findByType(PublicationType type) {
-        return em.createQuery(
+        var list = em.createQuery(
             "SELECT p FROM Publication p WHERE p.type = :type AND p.visible = true ORDER BY p.uploadedAt DESC",
             Publication.class)
             .setParameter("type", type)
             .getResultList();
+        // Initialize lazy collections to avoid LazyInitializationException
+        for (Publication p : list) {
+            Hibernate.initialize(p.getTags());
+            Hibernate.initialize(p.getComments());
+            Hibernate.initialize(p.getRatings());
+            Hibernate.initialize(p.getAuthors());
+        }
+        return list;
     }
     
     public void update(Long id, String title, List<String> authors, String abstract_, 
