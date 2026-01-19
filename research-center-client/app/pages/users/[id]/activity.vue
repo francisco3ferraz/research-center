@@ -3,10 +3,10 @@
     <div class="bg-white shadow rounded-lg p-6">
       <div class="flex items-center justify-between mb-6">
         <div>
-          <h2 class="text-2xl font-bold text-slate-800">Histór ico de Atividade</h2>
-          <p class="text-sm text-slate-500">Registo das suas ações na plataforma</p>
+          <h2 class="text-2xl font-bold text-slate-800">Histórico de Atividade do Utilizador</h2>
+          <p class="text-sm text-slate-500">Visualizar ações deste utilizador</p>
         </div>
-        <NuxtLink to="/profile" class="text-blue-600 hover:underline text-sm">Voltar ao Perfil</NuxtLink>
+        <NuxtLink to="/users" class="text-blue-600 hover:underline text-sm">Voltar a Utilizadores</NuxtLink>
       </div>
 
       <div v-if="loading" class="text-slate-600">A carregar histórico...</div>
@@ -35,15 +35,6 @@
             </div>
           </div>
         </div>
-
-        <div v-if="items.length > 0" class="flex justify-between items-center mt-6 pt-4 border-t">
-          <div class="text-sm text-slate-600">Mostrando {{ items.length }} atividades</div>
-          <div class="flex gap-2">
-            <button @click="loadMore" v-if="hasMore" class="px-4 py-2 border rounded bg-white hover:bg-gray-50">
-              Carregar mais
-            </button>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -52,37 +43,23 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 const api = useApi()
-const auth = useAuth()
+const route = useRoute()
+const userId = route.params.id
 
 const items = ref([])
 const loading = ref(false)
-const page = ref(0)
-const size = ref(20)
-const hasMore = ref(true)
 
 const fetchActivity = async () => {
-  // Rely on API 401 for redirect
   loading.value = true
   try{
-    const resp = await api.get('/activity-logs/my', { params: { page: page.value, size: size.value } })
-    const data = resp.data
-    if (page.value === 0) {
-      items.value = data.content || []
-    } else {
-      items.value = [...items.value, ...(data.content || [])]
-    }
-    hasMore.value = (page.value + 1) < (data.totalPages || 0)
+    const resp = await api.get(`/users/${userId}/activity`)
+    // Endpoint returns List, not Page
+    items.value = Array.isArray(resp.data) ? resp.data : []
   } catch (e) {
     console.error(e)
-    if (e?.response?.status === 401) navigateTo('/auth/login')
   } finally {
     loading.value = false
   }
-}
-
-const loadMore = () => {
-  page.value++
-  fetchActivity()
 }
 
 const getActionLabel = (actionType) => {

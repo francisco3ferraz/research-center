@@ -167,7 +167,7 @@ public class PublicationBean {
     public List<Publication> findWithFiltersSorted(String search, String areaScientific, Long tagId,
                                                    java.time.LocalDateTime dateFrom, java.time.LocalDateTime dateTo,
                                                    String sortBy, String order,
-                                                   int page, int size, boolean includeConfidential) {
+                                                   int page, int size, boolean includeConfidential, boolean includeHidden) {
         String sort = sortBy != null ? sortBy.toLowerCase() : "date";
         String ord = order != null ? order.toLowerCase() : "desc";
         boolean asc = "asc".equals(ord);
@@ -175,7 +175,9 @@ public class PublicationBean {
         StringBuilder sb = new StringBuilder("SELECT p FROM Publication p ");
         if (tagId != null) sb.append(" JOIN p.tags t ");
         sb.append(" WHERE 1=1 ");
-        sb.append(" AND p.visible = true ");
+        if (!includeHidden) {
+            sb.append(" AND p.visible = true ");
+        }
         if (!includeConfidential) {
             sb.append(" AND p.confidential = false ");
         }
@@ -520,11 +522,13 @@ public class PublicationBean {
     }
 
     public long countWithFilters(String search, String areaScientific, Long tagId,
-                                  java.time.LocalDateTime dateFrom, java.time.LocalDateTime dateTo, boolean includeConfidential) {
+                                  java.time.LocalDateTime dateFrom, java.time.LocalDateTime dateTo, boolean includeConfidential, boolean includeHidden) {
         StringBuilder sb = new StringBuilder("SELECT COUNT(DISTINCT p) FROM Publication p ");
         if (tagId != null) sb.append(" JOIN p.tags t ");
         sb.append(" WHERE 1=1 ");
-        sb.append(" AND p.visible = true ");
+        if (!includeHidden) {
+            sb.append(" AND p.visible = true ");
+        }
         if (!includeConfidential) {
             sb.append(" AND p.confidential = false ");
         }

@@ -44,6 +44,7 @@
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <button @click="openEdit(u)" title="Editar" class="text-blue-600 hover:text-blue-900 mr-3">Editar</button>
+                  <NuxtLink :to="`/users/${u.id}/activity`" class="text-purple-600 hover:text-purple-900 mr-3" title="Histórico">Histórico</NuxtLink>
                   <button @click="toggleActive(u)" title="Ativar/Desativar" class="text-gray-600 hover:text-gray-900 mr-3">{{ u.active ? 'Desativar' : 'Ativar' }}</button>
                   <button @click="removeUser(u)" title="Remover" class="text-red-600 hover:text-red-900">Remover</button>
                 </td>

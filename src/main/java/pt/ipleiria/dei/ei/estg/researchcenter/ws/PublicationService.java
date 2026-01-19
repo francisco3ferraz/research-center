@@ -97,6 +97,7 @@ public class PublicationService {
             @QueryParam("dateTo") String dateToStr,
             @QueryParam("sortBy") String sortBy,
             @QueryParam("order") String order,
+            @QueryParam("showHidden") boolean showHidden,
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("10") int size
     ) {
@@ -119,13 +120,14 @@ public class PublicationService {
         User user = getUserFromToken();
         boolean isGuest = (user == null);
         boolean canSeeConfidential = !isGuest && (user.getRole() == UserRole.ADMINISTRADOR || user.getRole() == UserRole.RESPONSAVEL);
+        boolean canSeeHidden = canSeeConfidential && showHidden;
 
         var pubs = isGuest
                 ? publicationBean.findPublicWithFiltersSorted(search, areaScientific, tagId, dateFrom, dateTo, sortBy, order, page, size)
-                : publicationBean.findWithFiltersSorted(search, areaScientific, tagId, dateFrom, dateTo, sortBy, order, page, size, canSeeConfidential);
+                : publicationBean.findWithFiltersSorted(search, areaScientific, tagId, dateFrom, dateTo, sortBy, order, page, size, canSeeConfidential, canSeeHidden);
         long total = isGuest
                 ? publicationBean.countPublicWithFilters(search, areaScientific, tagId, dateFrom, dateTo)
-                : publicationBean.countWithFilters(search, areaScientific, tagId, dateFrom, dateTo, canSeeConfidential);
+                : publicationBean.countWithFilters(search, areaScientific, tagId, dateFrom, dateTo, canSeeConfidential, canSeeHidden);
         int totalPages = size > 0 ? (int) ((total + size - 1) / size) : 1;
         var content = PublicationDTO.from(pubs);
         var result = Map.of(
@@ -306,6 +308,7 @@ public class PublicationService {
                                        @QueryParam("dateFrom") String dateFromStr,
                                        @QueryParam("dateTo") String dateToStr,
                                        @QueryParam("sortBy") String sortBy,
+                                       @QueryParam("showHidden") boolean showHidden,
                                        @QueryParam("order") String order) {
         java.time.LocalDateTime dateFrom = null;
         java.time.LocalDateTime dateTo = null;
@@ -323,7 +326,8 @@ public class PublicationService {
         // Export all matching (no pagination)
         // Export all matching (no pagination)
         boolean canSeeConfidential = securityContext.isUserInRole("ADMINISTRADOR") || securityContext.isUserInRole("RESPONSAVEL");
-        var pubs = publicationBean.findWithFiltersSorted(search, areaScientific, tagId, dateFrom, dateTo, sortBy, order, 0, 0, canSeeConfidential);
+        boolean canSeeHidden = canSeeConfidential && showHidden;
+        var pubs = publicationBean.findWithFiltersSorted(search, areaScientific, tagId, dateFrom, dateTo, sortBy, order, 0, 0, canSeeConfidential, canSeeHidden);
         var dtos = PublicationDTO.from(pubs);
 
         if ("json".equalsIgnoreCase(format)) {
@@ -856,7 +860,13 @@ public class PublicationService {
     @Path("/{id}/comments")
     @PermitAll
     public Response getComments(@PathParam("id") Long id) throws Exception {
-        var comments = commentBean.findByPublication(id);
+        User user = getUserFromToken();
+        boolean canSeeHidden = (user != null) && (user.getRole() == UserRole.ADMINISTRADOR || user.getRole() == UserRole.RESPONSAVEL);
+
+        var comments = canSeeHidden 
+            ? commentBean.findAllByPublicationIncludingHidden(id)
+            : commentBean.findByPublication(id);
+
         return Response.ok(pt.ipleiria.dei.ei.estg.researchcenter.dtos.CommentDTO.from(comments)).build();
     }
 

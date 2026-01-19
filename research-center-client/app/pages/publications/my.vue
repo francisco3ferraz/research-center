@@ -91,7 +91,7 @@ const totalPages = ref(1)
 const totalElements = ref(0)
 
 const fetchMyPubs = async () => {
-  if (!auth.token.value) return navigateTo('/auth/login')
+  // Rely on API 401
   loading.value = true
   try {
     const resp = await api.get('/publications/my-publications', { params: { page: page.value, size: size.value } })

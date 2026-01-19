@@ -90,16 +90,22 @@
                 :key="c.id"
                 class="border rounded p-3 bg-gray-50"
               >
-                <div class="flex items-baseline justify-between">
-                  <div class="font-medium">
-                    {{ c.author?.name || "Anónimo" }}
+                  <div class="flex items-center gap-2">
+                    <div class="font-medium">
+                        {{ c.author?.name || "Anónimo" }}
+                    </div>
+                     <span v-if="c.visible === false" class="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">Oculto</span>
                   </div>
-                  <div class="text-xs text-slate-400">
-                    {{
-                      c.createdAt ? new Date(c.createdAt).toLocaleString() : ""
-                    }}
+                  <div class="flex items-center gap-2">
+                      <div class="text-xs text-slate-400">
+                        {{
+                        c.createdAt ? new Date(c.createdAt).toLocaleString() : ""
+                        }}
+                      </div>
+                      <button v-if="canManageComments" @click="toggleCommentVisibility(c)" class="text-xs text-blue-600 hover:underline font-medium">
+                        {{ c.visible ? 'Ocultar' : 'Mostrar' }}
+                      </button>
                   </div>
-                </div>
                 <div class="mt-2 text-slate-700">
                   {{ c.content || c.text || "" }}
                 </div>
@@ -491,4 +497,16 @@ const canEdit = computed(() => {
     pub.value.uploadedBy.id === auth.user.value.id
   );
 });
+
+const canManageComments = computed(() => {
+  if (!auth.token.value || !auth.user.value) return false;
+  return auth.user.value.role === 'ADMINISTRADOR' || auth.user.value.role === 'RESPONSAVEL';
+});
+
+const toggleCommentVisibility = async (c) => {
+    try {
+        await api.patch(`/comments/${c.id}/visibility`, { visible: !c.visible });
+        c.visible = !c.visible; 
+    } catch(e) { console.error(e); alert('Erro ao alterar visibilidade'); }
+};
 </script>

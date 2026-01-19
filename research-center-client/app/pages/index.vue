@@ -30,33 +30,39 @@
     </div>
 
     <div class="bg-white shadow rounded-lg p-4">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4 items-end">
         <input
           v-model="search"
           placeholder="Pesquisar título, autor ou tag..."
-          class="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-200"
         />
 
         <select
           v-model="sortBy"
           @change="fetchPubs"
-          class="border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+          class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-200"
         >
           <option value="">Ordenar por...</option>
           <option value="comments">Nº Comentários</option>
           <option value="rating">Rating Médio</option>
           <option value="ratings_count">Nº Ratings</option>
+          <option value="views">Nº Visualizações</option>
           <option value="date">Data Upload</option>
         </select>
 
-        <div class="flex gap-2">
+        <div v-if="auth.token.value && (auth.user.value?.role === 'ADMINISTRADOR' || auth.user.value?.role === 'RESPONSAVEL')" class="flex items-center gap-2 h-full pb-2">
+            <input type="checkbox" v-model="showHidden" id="showHidden" class="w-4 h-4 text-blue-600 rounded">
+            <label for="showHidden" class="text-sm select-none cursor-pointer">Mostrar Ocultos</label>
+        </div>
+
+        <div class="flex gap-2 w-full">
           <button
             @click="fetchPubs"
-            class="flex-1 bg-blue-600 text-white px-4 py-2 rounded shadow"
+            class="flex-1 bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700"
           >
             Pesquisar
           </button>
-          <button @click="clearFilters" class="px-4 py-2 border rounded">
+          <button @click="clearFilters" class="px-4 py-2 border rounded hover:bg-gray-50">
             Limpar
           </button>
         </div>
@@ -134,6 +140,7 @@ const order = ref("desc");
 const page = ref(0);
 const size = ref(10);
 const totalPages = ref(1);
+const showHidden = ref(false);
 
 const fetchPubs = async () => {
   loading.value = true;
@@ -144,6 +151,7 @@ const fetchPubs = async () => {
       size: size.value,
       sortBy: sortBy.value || undefined,
       order: order.value,
+      showHidden: showHidden.value,
     };
     const resp = await api.get("/publications", { params });
     const data = resp.data;
@@ -160,6 +168,7 @@ const clearFilters = () => {
   search.value = "";
   sortBy.value = "";
   order.value = "desc";
+  showHidden.value = false;
   page.value = 0;
   fetchPubs();
 };

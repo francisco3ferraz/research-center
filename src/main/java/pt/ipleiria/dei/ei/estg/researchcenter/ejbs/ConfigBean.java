@@ -42,175 +42,148 @@ public class ConfigBean {
     
     @EJB
     private ActivityLogBean activityLogBean;
+
+    @EJB
+    private UserBean userBean;
     
     @PostConstruct
     public void populateDB() {
-        System.out.println("Hello Publications Platform!");
+        System.out.println("Hello Publications Platform! Starting Massive Seeding...");
         logger.info("Database population started...");
         
         try {
-            // Create Tags
-            tagBean.create("Projeto X", "Publicações relacionadas com o Projeto X");
-            tagBean.create("Projeto Y", "Publicações relacionadas com o Projeto Y");
-            tagBean.create("Machine Learning", "Técnicas e aplicações de ML");
-            tagBean.create("Deep Learning", "Redes neurais profundas");
-            tagBean.create("Urgent", "Conteúdo urgente");
-            logger.info("Tags created");
+            // 1. Create Users
+            // Helper to safe create
+            pt.ipleiria.dei.ei.estg.researchcenter.entities.Administrator admin = null;
+            try { admin = administratorBean.create("admin", "admin", "Administrator", "admin@research.pt"); } catch (Exception e) { 
+                 try { admin = (pt.ipleiria.dei.ei.estg.researchcenter.entities.Administrator) userBean.findByUsername("admin"); } catch(Exception ex) {} 
+            }
             
-            // Create Users
-            var admin = administratorBean.create("admin", "admin", "Administrator User", "admin@research.pt");
-            logger.info("Administrator created with ID: " + admin.getId());
-            
-            var manager = managerBean.create("manager1", "manager", "Maria Manager", "maria@research.pt");
-            logger.info("Manager created with ID: " + manager.getId());
-            
-            var joao = collaboratorBean.create("joao", "joao123", "João A", "joao@research.pt");
-            var joana = collaboratorBean.create("joana", "joana123", "Joana B", "joana@research.pt");
-            var manuel = collaboratorBean.create("manuel", "manuel123", "Manuel C", "manuel@research.pt");
-            var ana = collaboratorBean.create("ana", "ana123", "Ana D", "ana@research.pt");
-            logger.info("Collaborators created");
+            pt.ipleiria.dei.ei.estg.researchcenter.entities.Manager responsavel = null;
+            try { responsavel = managerBean.create("responsavel", "123", "Responsável T.", "resp@research.pt"); } catch (Exception e) {
+                 try { responsavel = (pt.ipleiria.dei.ei.estg.researchcenter.entities.Manager) userBean.findByUsername("responsavel"); } catch(Exception ex) {}
+            }
 
-            // Ensure a system collaborator exists to be used as a fallback uploader
-            try {
-                collaboratorBean.findByUsername("system");
-            } catch (pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException e) {
+            var collaborators = new java.util.ArrayList<pt.ipleiria.dei.ei.estg.researchcenter.entities.Collaborator>();
+            for (int i = 1; i <= 10; i++) {
                 try {
-                    collaboratorBean.create("system", "system", "System", "system@research.pt");
-                    logger.info("System collaborator created");
-                } catch (Exception ex) {
-                    logger.warning("Could not create system collaborator: " + ex.getMessage());
+                    collaborators.add(collaboratorBean.create("user" + i, "123", "Collaborator " + i, "user" + i + "@research.pt"));
+                } catch (Exception e) {
+                    try { collaborators.add(collaboratorBean.findByUsername("user"+i)); } catch(Exception ex) {}
                 }
             }
             
-            // Create Publications
-            // Ensure some scientific areas exist for selects and associations
-            try {
-                scientificAreaBean.create("Ciência de Dados", "Área relacionada com análise de dados e machine learning");
-            } catch (Exception ignored) {}
-            try {
-                scientificAreaBean.create("Ciência dos Materiais", "Estudo de materiais e propriedades quânticas");
-            } catch (Exception ignored) {}
-            try {
-                scientificAreaBean.create("Inteligência Artificial", "Pesquisa em IA, redes neurais e aprendizagem automática");
-            } catch (Exception ignored) {}
-            try {
-                scientificAreaBean.create("Segurança Informática", "Segurança, redes e criptografia");
-            } catch (Exception ignored) {}
-            try {
-                scientificAreaBean.create("Sistemas Distribuídos", "Sistemas, redes e computação distribuída");
-            } catch (Exception ignored) {}
-            var pub1 = publicationBean.create(
-                "Machine Learning in Data Science",
-                Arrays.asList("João A", "Maria Santos"),
-                PublicationType.ARTICLE,
-                "Ciência de Dados",
-                2024,
-                "This paper explores the application of ML techniques in data analysis.",
-                joao.getId()
-            );
-            pub1.setPublisher("IEEE");
-            pub1.setDoi("10.1109/example.2024.123456");
-            pub1.setAiGeneratedSummary("Este artigo apresenta técnicas inovadoras de machine learning aplicadas à ciência de dados...");
+            // 2. Create Scientific Areas
+            String[] areaNames = {"Software Engineering", "Artificial Intelligence", "Cybersecurity", "Internet of Things", "Data Science", "Bioinformatics", "Robotics"};
+            for (String name : areaNames) {
+                try { scientificAreaBean.create(name, "Research in " + name); } catch (Exception ignored) {}
+            }
             
-            var pub2 = publicationBean.create(
-                "Quantum Materials Research",
-                Arrays.asList("Joana B", "Pedro Silva"),
-                PublicationType.ARTICLE,
-                "Ciência dos Materiais",
-                2024,
-                "A comprehensive study on quantum properties of new materials.",
-                joana.getId()
-            );
-            pub2.setPublisher("Nature");
-            pub2.setDoi("10.1038/example.2024.789");
+            // 3. Create Tags
+            var allTags = new java.util.ArrayList<pt.ipleiria.dei.ei.estg.researchcenter.entities.Tag>();
+            for (int i = 1; i <= 20; i++) {
+                try {
+                    allTags.add(tagBean.create("Tag " + i, "Description for Tag " + i));
+                } catch (Exception e) {
+                    try { allTags.add(tagBean.findByName("Tag "+i)); } catch(Exception ex){}
+                }
+            }
+
+            // 4. Create Publications (Massive Loop)
+            java.util.Random rand = new java.util.Random();
+            var types = PublicationType.values();
             
-            var pub3 = publicationBean.create(
-                "Deep Learning for Image Recognition",
-                Arrays.asList("Manuel C"),
-                PublicationType.CONFERENCE,
-                "Inteligência Artificial",
-                2025,
-                "Novel approach to image classification using deep neural networks.",
-                manuel.getId()
-            );
-            pub3.setPublisher("ACM");
-            pub3.setConfidential(false);
-            
-            logger.info("Publications created");
-            
-            // Add tags to publications
-            publicationBean.addTag(pub1.getId(), 1L); // Projeto X
-            publicationBean.addTag(pub1.getId(), 3L); // Machine Learning
-            
-            publicationBean.addTag(pub2.getId(), 2L); // Projeto Y
-            
-            publicationBean.addTag(pub3.getId(), 1L); // Projeto X
-            publicationBean.addTag(pub3.getId(), 3L); // Machine Learning
-            publicationBean.addTag(pub3.getId(), 4L); // Deep Learning
-            publicationBean.addTag(pub3.getId(), 5L); // Urgent
-            
-            logger.info("Tags added to publications");
-            
-            // Create Comments
-            commentBean.create(
-                "Parem com tudo! Esta nova técnica pode revolucionar a nossa abordagem ao Projeto X!",
-                joana.getId(),
-                pub1.getId()
-            );
-            
-            commentBean.create(
-                "Excelente trabalho! Muito relevante para o Projeto X.",
-                manuel.getId(),
-                pub1.getId()
-            );
-            
-            commentBean.create(
-                "Esta abordagem precisa de mais validação experimental.",
-                ana.getId(),
-                pub2.getId()
-            );
-            
-            logger.info("Comments created");
-            
-            // Create Ratings
-            ratingBean.create(5, joao.getId(), pub2.getId());
-            ratingBean.create(4, joana.getId(), pub1.getId());
-            ratingBean.create(5, manuel.getId(), pub1.getId());
-            ratingBean.create(4, ana.getId(), pub3.getId());
-            ratingBean.create(5, joao.getId(), pub3.getId());
-            
-            logger.info("Ratings created");
-            
-            // Subscribe users to tags
-            collaboratorBean.subscribeToTag(joao.getId(), 1L); // João subscribes to Projeto X
-            collaboratorBean.subscribeToTag(manuel.getId(), 1L); // Manuel subscribes to Projeto X
-            collaboratorBean.subscribeToTag(ana.getId(), 2L); // Ana subscribes to Projeto Y
-            
-            logger.info("Tag subscriptions created");
-            
-            // Create some activity logs
-            activityLogBean.create(admin, "CREATE_USER", "USER", joao.getId(),
-                "Criação do utilizador 'João A'");
-            activityLogBean.create(admin, "CREATE_USER", "USER", joana.getId(),
-                "Criação do utilizador 'Joana B'");
-            activityLogBean.create(admin, "CREATE_USER", "USER", manuel.getId(),
-                "Criação do utilizador 'Manuel C'");
-            activityLogBean.create(manager, "CREATE_TAG", "TAG", 1L,
-                "Criação da tag 'Projeto X'");
-            activityLogBean.create(joao, "UPLOAD_PUBLICATION", "PUBLICATION", pub1.getId(),
-                "Upload da publicação 'Machine Learning in Data Science'");
-            activityLogBean.create(joana, "UPLOAD_PUBLICATION", "PUBLICATION", pub2.getId(), 
-                "Upload da publicação 'Quantum Materials Research'");
-            activityLogBean.create(manuel, "ADD_COMMENT", "PUBLICATION", pub1.getId(), 
-                "Comentário adicionado à publicação");
-            
-            logger.info("Activity logs created");
+            if (collaborators.isEmpty()) { 
+                logger.warning("No collaborators found, skipping publication seeding.");
+                return; 
+            }
+
+            logger.info("Seeding 200 publications...");
+            for (int i = 1; i <= 200; i++) {
+                try {
+                    var uploader = collaborators.get(rand.nextInt(collaborators.size()));
+                    var type = types[rand.nextInt(types.length)];
+                    var area = areaNames[rand.nextInt(areaNames.length)];
+                    int year = 2015 + rand.nextInt(11); // 2015-2025
+                    
+                    String title = "Publication " + i + ": " + generateRandomTitle(rand);
+                    String summary = "This is a generated summary for publication " + i + ". It explores " + area + " in the context of " + type.getName() + "...";
+                    
+                    var pub = publicationBean.create(
+                        title,
+                        Arrays.asList(uploader.getName(), "Co-Author A", "Co-Author B"),
+                        type,
+                        area,
+                        year,
+                        summary,
+                        uploader.getId()
+                    );
+                    
+                    // Metadata
+                    pub.setDoi("10.1000/" + rand.nextInt(10000));
+                    pub.setPublisher(rand.nextBoolean() ? "IEEE" : (rand.nextBoolean() ? "ACM" : "Springer"));
+                    if (rand.nextBoolean()) pub.setAiGeneratedSummary("AI Summary: " + summary);
+                    
+                    // Visibility (10% hidden, 5% confidential)
+                    if (rand.nextInt(100) < 10) pub.setVisible(false);
+                    if (rand.nextInt(100) < 5) pub.setConfidential(true);
+                    
+                    // Activity Log for Upload
+                    try {
+                        activityLogBean.create(uploader, "UPLOAD_PUBLICATION", "PUBLICATION", pub.getId(), 
+                            "Upload da publicação '" + title + "'");
+                    } catch (Exception ignored) {}
+                    
+                    // Set Random Views (0 - 1200)
+                    pub.setViewsCount(rand.nextInt(1201));
+
+                    // Add Random Tags (1 to 5 tags)
+                    int numTags = 1 + rand.nextInt(5);
+                    for (int t = 0; t < numTags; t++) {
+                        if (!allTags.isEmpty()) {
+                            publicationBean.addTag(pub.getId(), allTags.get(rand.nextInt(allTags.size())).getId());
+                        }
+                    }
+                    
+                    // Add Comments (0-20)
+                    int numComments = rand.nextInt(21);
+                    for (int c = 0; c < numComments; c++) {
+                        var author = collaborators.get(rand.nextInt(collaborators.size()));
+                        try {
+                            commentBean.create("Comment " + c + " on " + title + ". Interesting work!", author.getId(), pub.getId());
+                            activityLogBean.create(author, "COMMENT", "PUBLICATION", pub.getId(), "Comentou na publicação '" + title + "'");
+                        } catch(Exception ignored){}
+                    }
+                    
+                    // Add Ratings (0-25)
+                    int numRatings = rand.nextInt(26);
+                    for (int r = 0; r < numRatings; r++) {
+                        var author = collaborators.get(rand.nextInt(collaborators.size()));
+                        try {
+                            ratingBean.create(1 + rand.nextInt(5), author.getId(), pub.getId());
+                            activityLogBean.create(author, "RATE", "PUBLICATION", pub.getId(), "Avaliou a publicação '" + title + "'");
+                        } catch (Exception ignored){}
+                    }
+                    
+                } catch (Exception e) {
+                   // Ignore specific errors (duplicates etc)
+                }
+            }
+            logger.info("Massive seeding completed.");
             
         } catch (Exception e) {
-            logger.severe("Error populating database: " + e.getMessage());
+            logger.severe("Critical error in seeding: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+    
+    private String generateRandomTitle(java.util.Random rand) {
+        String[] prefixes = {"Advanced", "Novel", "Study of", "Analysis of", "Review of", "Future of"};
+        String[] subjects = {"Machine Learning", "Cloud Computing", "IoT", "Blockchain", "Quantum Computing", "Bio-Algorithms"};
+        String[] suffixes = {"Systems", "Networks", "Applications", "Challenges", "Protocols"};
         
-        logger.info("Database population completed!");
+        return prefixes[rand.nextInt(prefixes.length)] + " " +
+               subjects[rand.nextInt(subjects.length)] + " " +
+               suffixes[rand.nextInt(suffixes.length)];
     }
 }
