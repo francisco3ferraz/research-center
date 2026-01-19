@@ -63,7 +63,7 @@ public class ConfigBean {
                  try { responsavel = (Manager) userBean.findByUsername("responsavel"); } catch(Exception ex) {}
             }
 
-            List<Collaborator> collaborators = new ArrayList<>();
+            var collaborators = new ArrayList<Collaborator>();
             for (int i = 1; i <= 10; i++) {
                 try {
                     collaborators.add(collaboratorBean.create("user" + i, "123", "Collaborator " + i, "user" + i + "@research.pt"));
@@ -79,7 +79,7 @@ public class ConfigBean {
             }
             
             // 3. Create Tags
-            List<Tag> allTags = new ArrayList<>();
+            var allTags = new ArrayList<Tag>();
             for (int i = 1; i <= 20; i++) {
                 try {
                     allTags.add(tagBean.create("Tag " + i, "Description for Tag " + i));
@@ -89,8 +89,8 @@ public class ConfigBean {
             }
 
             // 4. Create Publications (Massive Loop)
-            java.util.Random rand = new java.util.Random();
-            PublicationType[] types = PublicationType.values();
+            var rand = new java.util.Random();
+            var types = PublicationType.values();
             
             if (collaborators.isEmpty()) { 
                 logger.warning("No collaborators found, skipping publication seeding.");
@@ -100,15 +100,15 @@ public class ConfigBean {
             logger.info("Seeding 50 publications...");
             for (int i = 1; i <= 50; i++) {
                 try {
-                    Collaborator uploader = collaborators.get(rand.nextInt(collaborators.size()));
-                    PublicationType type = types[rand.nextInt(types.length)];
-                    String area = areaNames[rand.nextInt(areaNames.length)];
-                    int year = 2015 + rand.nextInt(11); // 2015-2025
+                    var uploader = collaborators.get(rand.nextInt(collaborators.size()));
+                    var type = types[rand.nextInt(types.length)];
+                    var area = areaNames[rand.nextInt(areaNames.length)];
+                    var year = 2015 + rand.nextInt(11); // 2015-2025
                     
                     String title = "Publication " + i + ": " + generateRandomTitle(rand);
                     String summary = "This is a generated summary for publication " + i + ". It explores " + area + " in the context of " + type.getName() + "...";
                     
-                    Publication pub = publicationBean.create(
+                    var pub = publicationBean.create(
                         title,
                         Arrays.asList(uploader.getName(), "Co-Author A", "Co-Author B"),
                         type,
@@ -137,7 +137,7 @@ public class ConfigBean {
                     pub.setViewsCount(rand.nextInt(1201));
 
                     // Add Random Tags (1 to 5 tags)
-                    int numTags = 1 + rand.nextInt(5);
+                    var numTags = 1 + rand.nextInt(5);
                     for (int t = 0; t < numTags; t++) {
                         if (!allTags.isEmpty()) {
                             publicationBean.addTag(pub.getId(), allTags.get(rand.nextInt(allTags.size())).getId());
@@ -145,9 +145,9 @@ public class ConfigBean {
                     }
                     
                     // Add Comments (0-20)
-                    int numComments = rand.nextInt(21);
+                    var numComments = rand.nextInt(21);
                     for (int c = 0; c < numComments; c++) {
-                        Collaborator author = collaborators.get(rand.nextInt(collaborators.size()));
+                        var author = collaborators.get(rand.nextInt(collaborators.size()));
                         try {
                             commentBean.create("Comment " + c + " on " + title + ". Interesting work!", author.getId(), pub.getId());
                             activityLogBean.create(author, "COMMENT", "PUBLICATION", pub.getId(), "Comentou na publicação '" + title + "'");
@@ -155,9 +155,9 @@ public class ConfigBean {
                     }
                     
                     // Add Ratings (0-25)
-                    int numRatings = rand.nextInt(26);
+                    var numRatings = rand.nextInt(26);
                     for (int r = 0; r < numRatings; r++) {
-                        Collaborator author = collaborators.get(rand.nextInt(collaborators.size()));
+                        var author = collaborators.get(rand.nextInt(collaborators.size()));
                         try {
                             ratingBean.create(1 + rand.nextInt(5), author.getId(), pub.getId());
                             activityLogBean.create(author, "RATE", "PUBLICATION", pub.getId(), "Avaliou a publicação '" + title + "'");

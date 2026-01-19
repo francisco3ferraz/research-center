@@ -36,16 +36,16 @@ public class UserService {
     @GET
     @RolesAllowed({"ADMINISTRADOR"})
     public Response getAll() {
-        List<User> users = userBean.findAll();
+        var users = userBean.findAll();
         return Response.ok(UserDTO.from(users)).build();
     }
 
     @GET
     @Path("/lookup")
     public Response lookup(@QueryParam("q") String q) {
-        List<User> users = userBean.searchByName(q);
-        List<UserSummaryDTO> dtos = new ArrayList<>();
-        for (User user : users) {
+        var users = userBean.searchByName(q);
+        var dtos = new ArrayList<UserSummaryDTO>();
+        for (var user : users) {
             dtos.add(UserSummaryDTO.from(user));
         }
         return Response.ok(dtos).build();
@@ -54,7 +54,7 @@ public class UserService {
     @GET
     @Path("/{id}")
     public Response get(@PathParam("id") Long id) throws MyEntityNotFoundException {
-        User user = userBean.find(id);
+        var user = userBean.find(id);
         return Response.ok(UserDTO.from(user)).build();
     }
 
@@ -74,7 +74,7 @@ public class UserService {
             }
         }
 
-        User user = userBean.create(
+        var user = userBean.create(
                 dto.getUsername(),
                 dto.getPassword(),
                 dto.getName(),
@@ -105,7 +105,7 @@ public class UserService {
             }
         }
 
-        User user = userBean.update(id, dto.getName(), dto.getEmail(), role);
+        var user = userBean.update(id, dto.getName(), dto.getEmail(), role);
         return Response.ok(UserDTO.from(user)).build();
     }
 
@@ -113,7 +113,7 @@ public class UserService {
     @Path("/{id}/status")
     @RolesAllowed({"ADMINISTRADOR"})
     public Response setStatus(@PathParam("id") Long id, UserDTO dto) throws MyEntityNotFoundException {
-        User user = userBean.setActive(id, dto.isActive());
+        var user = userBean.setActive(id, dto.isActive());
         return Response.ok(UserDTO.from(user)).build();
     }
 
@@ -131,7 +131,7 @@ public class UserService {
         // Get the authenticated user's username
         String username = securityContext.getUserPrincipal().getName();
 
-        User user = userBean.updateProfile(username, dto.getName(), dto.getEmail());
+        var user = userBean.updateProfile(username, dto.getName(), dto.getEmail());
         return Response.ok(UserDTO.from(user)).build();
     }
 
@@ -142,7 +142,7 @@ public class UserService {
                                 @QueryParam("size") @DefaultValue("20") int size) throws MyEntityNotFoundException {
         // Check if user is viewing their own activity or is an admin
         String username = securityContext.getUserPrincipal().getName();
-        User currentUser = userBean.findByUsernameOrThrow(username);
+        var currentUser = userBean.findByUsernameOrThrow(username);
 
         // Only allow viewing own activity or if admin
         if (!currentUser.getId().equals(id) &&
@@ -152,7 +152,7 @@ public class UserService {
                     .build();
         }
 
-        List<ActivityLog> activities = activityLogBean.getUserActivityLogPaginated(id, page, size);
+        var activities = activityLogBean.getUserActivityLogPaginated(id, page, size);
         return Response.ok(ActivityLogDTO.from(activities)).build();
     }
 }

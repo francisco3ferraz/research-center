@@ -18,7 +18,7 @@ public class UserBean {
     private EntityManager em;
 
     public User find(Long id) throws MyEntityNotFoundException {
-        User user = em.find(User.class, id);
+        var user = em.find(User.class, id);
         if (user == null) {
             throw new MyEntityNotFoundException("User with id " + id + " not found");
         }
@@ -26,7 +26,7 @@ public class UserBean {
     }
     
     public User findByUsername(String username) {
-        List<User> users = em.createQuery("SELECT u FROM User u WHERE u.username = :username", User.class)
+        var users = em.createQuery("SELECT u FROM User u WHERE u.username = :username", User.class)
                       .setParameter("username", username)
                       .getResultList();
         
@@ -34,7 +34,7 @@ public class UserBean {
     }
 
     public User findByUsernameOrThrow(String username) throws MyEntityNotFoundException {
-        User user = findByUsername(username);
+        var user = findByUsername(username);
         if (user == null) {
             throw new MyEntityNotFoundException("User '" + username + "' not found");
         }
@@ -54,7 +54,7 @@ public class UserBean {
         if (q == null || q.isBlank()) {
             return findAll();
         }
-        String pattern = "%" + q.toLowerCase() + "%";
+        var pattern = "%" + q.toLowerCase() + "%";
         return em.createQuery("SELECT u FROM User u WHERE LOWER(u.name) LIKE :pattern ORDER BY u.name", User.class)
                  .setParameter("pattern", pattern)
                  .setMaxResults(20)
@@ -104,7 +104,7 @@ public class UserBean {
     public User update(Long id, String name, String email, UserRole newRole)
             throws MyEntityNotFoundException, MyConstraintViolationException {
 
-        User user = find(id);
+        var user = find(id);
 
         try {
             em.lock(user, jakarta.persistence.LockModeType.OPTIMISTIC);
@@ -131,7 +131,7 @@ public class UserBean {
     public User updateProfile(String username, String name, String email)
             throws MyEntityNotFoundException, MyConstraintViolationException {
 
-        User user = findByUsernameOrThrow(username);
+        var user = findByUsernameOrThrow(username);
 
         try {
             em.lock(user, jakarta.persistence.LockModeType.OPTIMISTIC);
@@ -149,7 +149,7 @@ public class UserBean {
      * EP05 - Ativar/Desativar Utilizador
      */
     public User setActive(Long id, boolean active) throws MyEntityNotFoundException {
-        User user = find(id);
+        var user = find(id);
         user.setActive(active);
         em.flush();
         return user;
@@ -160,7 +160,7 @@ public class UserBean {
      * EP06 - Remover Utilizador
      */
     public void delete(Long id) throws MyEntityNotFoundException {
-        User user = find(id);
+        var user = find(id);
         
         // Manual Cascade Delete/Unlink to avoid Constraint Violation
         
@@ -210,14 +210,14 @@ public class UserBean {
      * Updates last login timestamp.
      */
     public void updateLastLogin(String username) {
-        User user = findByUsername(username);
+        var user = findByUsername(username);
         if (user != null) {
             user.setLastLogin(LocalDateTime.now());
         }
     }
 
     public boolean changePassword(String username, String oldPassword, String newPassword) {
-        User user = findByUsername(username);
+        var user = findByUsername(username);
         if (user == null) return false;
 
         // Verify old password using Hasher
@@ -236,7 +236,7 @@ public class UserBean {
      * Used by AuthorizationFilter for @RequirePermission and @RequireAction annotations.
      */
     public boolean userHasPermission(String username, String permission) {
-        User user = findByUsername(username);
+        var user = findByUsername(username);
         if (user == null) return false;
 
         // Simple permission model:
