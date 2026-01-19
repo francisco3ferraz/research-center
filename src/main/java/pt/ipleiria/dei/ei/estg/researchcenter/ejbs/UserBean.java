@@ -163,6 +163,39 @@ public class UserBean {
      */
     public void delete(Long id) throws MyEntityNotFoundException {
         var user = find(id);
+        
+        // Manual Cascade Delete/Unlink to avoid Constraint Violation
+        
+        // 1. Delete Activity Logs
+        em.createQuery("DELETE FROM ActivityLog a WHERE a.user.id = :id")
+          .setParameter("id", id)
+          .executeUpdate();
+          
+        // 2. Unlink Publications (uploadedBy, submitter, hiddenBy)
+        em.createQuery("UPDATE Publication p SET p.uploadedBy = null WHERE p.uploadedBy.id = :id")
+          .setParameter("id", id)
+          .executeUpdate();
+        em.createQuery("UPDATE Publication p SET p.submitter = null WHERE p.submitter.id = :id")
+          .setParameter("id", id)
+          .executeUpdate();
+        // Also clear hiddenBy if this user hid any publication
+        em.createQuery("UPDATE Publication p SET p.hiddenBy = null WHERE p.hiddenBy.id = :id")
+          .setParameter("id", id)
+          .executeUpdate();
+
+        // 3. Delete Comments (use 'author' not 'user') and Unlink hiddenBy
+        em.createQuery("DELETE FROM Comment c WHERE c.author.id = :id")
+          .setParameter("id", id)
+          .executeUpdate();
+        em.createQuery("UPDATE Comment c SET c.hiddenBy = null WHERE c.hiddenBy.id = :id")
+          .setParameter("id", id)
+          .executeUpdate();
+
+        // 4. Delete Ratings (use 'user')
+        em.createQuery("DELETE FROM Rating r WHERE r.user.id = :id")
+          .setParameter("id", id)
+          .executeUpdate();
+
         em.remove(user);
     }
 
