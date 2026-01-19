@@ -9,8 +9,8 @@ import java.time.ZoneId;
 import java.util.Date;
 
 public class TokenIssuer {
-    protected static final byte[] SECRET_KEY =
-            "veRysup3rstr0nginv1ncible5ecretkeY@academics.dae.ipleiria".getBytes();
+    public static final byte[] SECRET_KEY =
+            "veRysup3rstr0nginv1ncible5ecretkeY@researchcenter.dae.ipleiria".getBytes();
     protected static final String ALGORITHM = "HMACSHA384";
     public static final long EXPIRY_MINS = 60L;
 

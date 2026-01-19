@@ -167,7 +167,7 @@ public class PublicationBean {
     public List<Publication> findWithFiltersSorted(String search, String areaScientific, Long tagId,
                                                    java.time.LocalDateTime dateFrom, java.time.LocalDateTime dateTo,
                                                    String sortBy, String order,
-                                                   int page, int size) {
+                                                   int page, int size, boolean includeConfidential) {
         String sort = sortBy != null ? sortBy.toLowerCase() : "date";
         String ord = order != null ? order.toLowerCase() : "desc";
         boolean asc = "asc".equals(ord);
@@ -176,6 +176,9 @@ public class PublicationBean {
         if (tagId != null) sb.append(" JOIN p.tags t ");
         sb.append(" WHERE 1=1 ");
         sb.append(" AND p.visible = true ");
+        if (!includeConfidential) {
+            sb.append(" AND p.confidential = false ");
+        }
         if (areaScientific != null && !areaScientific.isBlank()) sb.append(" AND p.areaScientific = :area ");
         if (search != null && !search.isBlank()) sb.append(" AND (LOWER(p.title) LIKE :search OR EXISTS (SELECT a FROM p.authors a WHERE LOWER(a) LIKE :search)) ");
         if (tagId != null) sb.append(" AND t.id = :tagId ");
@@ -517,10 +520,14 @@ public class PublicationBean {
     }
 
     public long countWithFilters(String search, String areaScientific, Long tagId,
-                                  java.time.LocalDateTime dateFrom, java.time.LocalDateTime dateTo) {
+                                  java.time.LocalDateTime dateFrom, java.time.LocalDateTime dateTo, boolean includeConfidential) {
         StringBuilder sb = new StringBuilder("SELECT COUNT(DISTINCT p) FROM Publication p ");
         if (tagId != null) sb.append(" JOIN p.tags t ");
         sb.append(" WHERE 1=1 ");
+        sb.append(" AND p.visible = true ");
+        if (!includeConfidential) {
+            sb.append(" AND p.confidential = false ");
+        }
         if (areaScientific != null && !areaScientific.isBlank()) sb.append(" AND p.areaScientific = :area ");
         if (search != null && !search.isBlank()) sb.append(" AND (LOWER(p.title) LIKE :search OR EXISTS (SELECT a FROM p.authors a WHERE LOWER(a) LIKE :search)) ");
         if (tagId != null) sb.append(" AND t.id = :tagId ");

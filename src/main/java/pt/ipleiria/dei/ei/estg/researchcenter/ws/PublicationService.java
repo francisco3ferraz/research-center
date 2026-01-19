@@ -22,6 +22,12 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.StreamingOutput;
 import jakarta.ws.rs.ForbiddenException;
 import jakarta.ws.rs.core.SecurityContext;
+import jakarta.ws.rs.core.HttpHeaders;
+import pt.ipleiria.dei.ei.estg.researchcenter.security.TokenIssuer;
+import pt.ipleiria.dei.ei.estg.researchcenter.entities.UserRole;
+import pt.ipleiria.dei.ei.estg.researchcenter.entities.User;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.Keys;
 
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
@@ -68,6 +74,8 @@ public class PublicationService {
     private RatingBean ratingBean;
     @Context
     private SecurityContext securityContext;
+    @Context
+    private HttpHeaders headers;
 
     private void ensureAuthorOrResponsibleOrAdmin(Long publicationId) throws Exception {
         var pub = publicationBean.find(publicationId);
@@ -107,13 +115,17 @@ public class PublicationService {
             // ignore parse errors and treat as null
         }
 
-        boolean isGuest = securityContext.getUserPrincipal() == null;
+
+        User user = getUserFromToken();
+        boolean isGuest = (user == null);
+        boolean canSeeConfidential = !isGuest && (user.getRole() == UserRole.ADMINISTRADOR || user.getRole() == UserRole.RESPONSAVEL);
+
         var pubs = isGuest
                 ? publicationBean.findPublicWithFiltersSorted(search, areaScientific, tagId, dateFrom, dateTo, sortBy, order, page, size)
-                : publicationBean.findWithFiltersSorted(search, areaScientific, tagId, dateFrom, dateTo, sortBy, order, page, size);
+                : publicationBean.findWithFiltersSorted(search, areaScientific, tagId, dateFrom, dateTo, sortBy, order, page, size, canSeeConfidential);
         long total = isGuest
                 ? publicationBean.countPublicWithFilters(search, areaScientific, tagId, dateFrom, dateTo)
-                : publicationBean.countWithFilters(search, areaScientific, tagId, dateFrom, dateTo);
+                : publicationBean.countWithFilters(search, areaScientific, tagId, dateFrom, dateTo, canSeeConfidential);
         int totalPages = size > 0 ? (int) ((total + size - 1) / size) : 1;
         var content = PublicationDTO.from(pubs);
         var result = Map.of(
@@ -131,18 +143,47 @@ public class PublicationService {
     @PermitAll
     public Response get(@PathParam("id") Long id) throws Exception {
         var pub = publicationBean.findWithDetails(id);
-        boolean isGuest = securityContext.getUserPrincipal() == null;
-        if (isGuest) {
-            // Guests can only access visible + non-confidential publications (enunciado: confidential not available externally)
+        User user = getUserFromToken();
+        
+        if (user == null) {
+            // Guest restrictions
             if (!pub.isVisible() || pub.isConfidential()) {
                 return Response.status(Response.Status.FORBIDDEN)
                         .entity(Map.of("message", "Publicação não disponível para convidados"))
                         .build();
             }
+        } else {
+            // Authenticated restrictions for hidden/confidential
+            if (!pub.isVisible() || pub.isConfidential()) {
+                boolean isPermitted = (user.getRole() == UserRole.ADMINISTRADOR || 
+                                       user.getRole() == UserRole.RESPONSAVEL ||
+                                       (pub.getUploadedBy() != null && pub.getUploadedBy().getId().equals(user.getId())));
+                if (!isPermitted) {
+                    return Response.status(Response.Status.FORBIDDEN)
+                            .entity(Map.of("message", "Apenas administradores, responsáveis ou o autor podem ver esta publicação"))
+                            .build();
+                }
+            }
         }
+
         // Track views for statistics/top-publications
         publicationBean.incrementViews(id);
         return Response.ok(PublicationDTO.fromWithDetails(pub)).build();
+    }
+    
+    // Helper to get User from token manually (for optional auth endpoints like get/getAll)
+    private pt.ipleiria.dei.ei.estg.researchcenter.entities.User getUserFromToken() {
+        String authHeader = headers.getHeaderString(HttpHeaders.AUTHORIZATION);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) return null;
+        try {
+            String token = authHeader.substring(7).trim();
+            var key = Keys.hmacShaKeyFor(TokenIssuer.SECRET_KEY);
+            String username = Jwts.parser().setSigningKey(key).build().parseClaimsJws(token).getBody().getSubject();
+            if (username != null) {
+                return userBean.findByUsername(username);
+            }
+        } catch (Exception ignore) {}
+        return null;
     }
 
     /**
@@ -183,6 +224,10 @@ public class PublicationService {
         Double minRating = extractDouble(body, "minRating");
         Boolean hasComments = extractBoolean(body, "hasComments");
         Boolean confidential = extractBoolean(body, "confidential");
+        // Enforce role restrictions
+        if (!securityContext.isUserInRole("ADMINISTRADOR") && !securityContext.isUserInRole("RESPONSAVEL")) {
+             confidential = false;
+        }
         String sortBy = body != null && body.get("sortBy") != null ? body.get("sortBy").toString() : null;
         String order = body != null && body.get("order") != null ? body.get("order").toString() : null;
         Integer pageBody = extractInt(body, "page");
@@ -276,7 +321,9 @@ public class PublicationService {
         } catch (Exception ignore) {}
 
         // Export all matching (no pagination)
-        var pubs = publicationBean.findWithFiltersSorted(search, areaScientific, tagId, dateFrom, dateTo, sortBy, order, 0, 0);
+        // Export all matching (no pagination)
+        boolean canSeeConfidential = securityContext.isUserInRole("ADMINISTRADOR") || securityContext.isUserInRole("RESPONSAVEL");
+        var pubs = publicationBean.findWithFiltersSorted(search, areaScientific, tagId, dateFrom, dateTo, sortBy, order, 0, 0, canSeeConfidential);
         var dtos = PublicationDTO.from(pubs);
 
         if ("json".equalsIgnoreCase(format)) {
