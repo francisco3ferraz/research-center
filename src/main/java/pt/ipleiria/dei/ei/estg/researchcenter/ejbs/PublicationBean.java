@@ -200,6 +200,9 @@ public class PublicationBean {
             case "comments":
                 orderClause = " ORDER BY (SELECT COUNT(c) FROM Comment c WHERE c.publication = p AND c.visible = true) ";
                 break;
+            case "views":
+                orderClause = " ORDER BY p.viewsCount ";
+                break;
             case "date":
             default:
                 orderClause = " ORDER BY p.uploadedAt ";
@@ -260,6 +263,9 @@ public class PublicationBean {
                 break;
             case "comments":
                 orderClause = " ORDER BY (SELECT COUNT(c) FROM Comment c WHERE c.publication = p AND c.visible = true) ";
+                break;
+            case "views":
+                orderClause = " ORDER BY p.viewsCount ";
                 break;
             case "date":
             default:
@@ -386,6 +392,9 @@ public class PublicationBean {
                 break;
             case "comments":
                 orderClause = " ORDER BY (SELECT COUNT(c) FROM Comment c WHERE c.publication = p AND c.visible = true) ";
+                break;
+            case "views":
+                orderClause = " ORDER BY p.viewsCount ";
                 break;
             case "date":
             default:

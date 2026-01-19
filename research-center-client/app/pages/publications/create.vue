@@ -472,6 +472,9 @@ const submit = async () => {
 };
 
 onMounted(() => {
+  if (!auth.token.value) {
+     return navigateTo('/auth/login')
+  }
   fetchAuxData();
 });
 </script>

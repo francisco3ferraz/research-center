@@ -85,8 +85,7 @@ const form = reactive({
 
 // Fetch user on mount (client-side only)
 onMounted(async () => {
-    auth.initAuth()
-    
+    // Rely on plugin/layout for auth init, or check here
     if (!auth.token.value) {
         navigateTo('/auth/login')
         return

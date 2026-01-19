@@ -36,6 +36,25 @@
           </div>
         </div>
       </div>
+      
+      <!-- Pagination Controls -->
+      <div v-if="!loading && items.length > 0" class="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
+          <button 
+            @click="prevPage" 
+            :disabled="page <= 1" 
+            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Anterior
+          </button>
+          <span class="text-sm text-slate-600">Página {{ page }}</span>
+          <button 
+            @click="nextPage" 
+            :disabled="!hasMore" 
+            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Próxima
+          </button>
+      </div>
     </div>
   </div>
 </template>
@@ -46,15 +65,21 @@ const api = useApi()
 const route = useRoute()
 const userId = route.params.id
 
-const items = ref([])
-const loading = ref(false)
+const page = ref(1)
+const size = 20
+const hasMore = ref(false)
 
 const fetchActivity = async () => {
   loading.value = true
   try{
-    const resp = await api.get(`/users/${userId}/activity`)
-    // Endpoint returns List, not Page
+    const resp = await api.get(`/users/${userId}/activity`, {
+        params: {
+            page: page.value - 1,
+            size
+        }
+    })
     items.value = Array.isArray(resp.data) ? resp.data : []
+    hasMore.value = items.value.length === size
   } catch (e) {
     console.error(e)
   } finally {
@@ -85,6 +110,21 @@ const getActivityColor = (actionType) => {
   }
   return colors[actionType] || 'border-gray-400'
 }
+
+const prevPage = () => {
+    if (page.value > 1) {
+        page.value--
+        fetchActivity()
+    }
+}
+
+const nextPage = () => {
+    if (hasMore.value) {
+        page.value++
+        fetchActivity()
+    }
+}
+
 
 onMounted(fetchActivity)
 </script>

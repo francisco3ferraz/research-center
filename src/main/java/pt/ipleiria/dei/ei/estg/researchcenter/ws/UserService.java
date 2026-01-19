@@ -138,7 +138,9 @@ public class UserService {
 
     @GET
     @Path("/{id}/activity")
-    public Response getActivity(@PathParam("id") Long id) throws MyEntityNotFoundException {
+    public Response getActivity(@PathParam("id") Long id,
+                                @QueryParam("page") @DefaultValue("0") int page,
+                                @QueryParam("size") @DefaultValue("20") int size) throws MyEntityNotFoundException {
         // Check if user is viewing their own activity or is an admin
         String username = securityContext.getUserPrincipal().getName();
         var currentUser = userBean.findByUsernameOrThrow(username);
@@ -151,7 +153,7 @@ public class UserService {
                     .build();
         }
 
-        var activities = activityLogBean.getUserActivityLog(id);
+        var activities = activityLogBean.getUserActivityLogPaginated(id, page, size);
         return Response.ok(ActivityLogDTO.from(activities)).build();
     }
 }

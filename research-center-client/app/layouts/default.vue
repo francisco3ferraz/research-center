@@ -24,65 +24,52 @@
                 Minhas Publicações
               </NuxtLink>
 
-              <!-- Administração dropdown: visible to RESPONSAVEL or ADMINISTRADOR -->
+
+            </div>
+          </div>
+          <div class="flex items-center">
+            <template v-if="auth.token.value">
               <div
                 v-if="
                   auth.token.value &&
                   (auth.user.value?.role === 'ADMINISTRADOR' ||
                     auth.user.value?.role === 'RESPONSAVEL')
                 "
-                class="relative"
+                class="relative mr-4"
               >
                 <button
                   @click="adminOpen = !adminOpen"
-                  class="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 rounded"
+                  class="bg-gray-100 text-gray-700 hover:bg-gray-200 px-3 py-2 rounded-md text-sm font-medium inline-flex items-center"
                 >
-                  Administração
-                  <svg
-                    class="ml-2 h-4 w-4"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M19 9l-7 7-7-7"
-                    />
+                  {{ auth.user.value?.role === 'ADMINISTRADOR' ? 'Administrador' : 'Responsável' }}
+                  <svg class="ml-2 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                   </svg>
                 </button>
 
                 <div
                   v-if="adminOpen"
-                  class="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md ring-1 ring-black ring-opacity-5 z-20"
+                  class="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-md ring-1 ring-black ring-opacity-5 z-20 origin-top-right"
                 >
                   <div class="py-1">
                     <NuxtLink
                       v-if="auth.user.value?.role === 'ADMINISTRADOR'"
                       to="/users"
                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >Utilizadores</NuxtLink
-                    >
+                    >Gerir Utilizadores</NuxtLink>
                     <NuxtLink
                       to="/tags"
                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >Tags</NuxtLink
-                    >
+                    >Gerir Tags</NuxtLink>
                     <NuxtLink
                       v-if="auth.user.value?.role === 'ADMINISTRADOR'"
                       to="/scientific-areas"
                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                      >Áreas Científicas</NuxtLink
-                    >
+                    >Gerir Áreas Científicas</NuxtLink>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-          <div class="flex items-center">
-            <template v-if="auth.token.value">
+
               <NuxtLink
                 to="/profile"
                 class="text-sm text-gray-500 mr-4 hover:text-gray-700"

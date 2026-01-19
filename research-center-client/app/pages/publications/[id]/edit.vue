@@ -258,6 +258,18 @@ const load = async () => {
   try {
     const resp = await api.get(`/publications/${id}`);
     const p = resp.data;
+    
+    const currentUser = auth.user.value;
+    if (!currentUser) return navigateTo('/auth/login');
+    
+    if (currentUser.role !== 'ADMINISTRADOR' && currentUser.role !== 'RESPONSAVEL') {
+        const owner = p.uploadedBy ? p.uploadedBy.username : null;
+        if (!owner || owner !== currentUser.username) {
+             console.warn("Unauthorized edit attempt");
+             return navigateTo(`/publications/${id}`);
+        }
+    }
+
     pub.value = p || {};
     form.value.title = p.title || "";
     form.value.authors = Array.isArray(p.authors) ? p.authors.slice() : [];

@@ -98,8 +98,8 @@ public class ConfigBean {
                 return; 
             }
 
-            logger.info("Seeding 200 publications...");
-            for (int i = 1; i <= 200; i++) {
+            logger.info("Seeding 50 publications...");
+            for (int i = 1; i <= 50; i++) {
                 try {
                     var uploader = collaborators.get(rand.nextInt(collaborators.size()));
                     var type = types[rand.nextInt(types.length)];
