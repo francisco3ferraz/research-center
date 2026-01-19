@@ -1,6 +1,7 @@
 package pt.ipleiria.dei.ei.estg.researchcenter.ws;
 
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.annotation.security.PermitAll;
 import jakarta.ejb.EJB;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -22,7 +23,6 @@ import java.util.List;
 @Path("tags")
 @Produces({MediaType.APPLICATION_JSON})
 @Consumes({MediaType.APPLICATION_JSON})
-@Authenticated
 public class TagService {
 
     @EJB
@@ -30,6 +30,7 @@ public class TagService {
 
     // EP25 - List all visible tags
     @GET
+    @PermitAll
     public Response getAll() {
         List<Tag> tags = tagBean.findAllVisible();
         return Response.ok(TagDTO.from(tags)).build();
@@ -37,6 +38,7 @@ public class TagService {
 
     // EP26 - Create tag (RESPONSAVEL or ADMINISTRADOR)
     @POST
+    @Authenticated
     @RolesAllowed({"RESPONSAVEL","ADMINISTRADOR"})
     public Response create(String rawBody) throws MyEntityExistsException, MyConstraintViolationException {
         if (rawBody == null || rawBody.isBlank()) {
@@ -66,6 +68,7 @@ public class TagService {
     // EP27 - Update tag
     @PUT
     @Path("/{id}")
+    @Authenticated
     @RolesAllowed({"RESPONSAVEL","ADMINISTRADOR"})
     public Response update(@PathParam("id") Long id, String rawBody) throws MyEntityNotFoundException, MyConstraintViolationException {
         if (rawBody == null || rawBody.isBlank()) {
@@ -96,6 +99,7 @@ public class TagService {
     // EP28 - Delete tag
     @DELETE
     @Path("/{id}")
+    @Authenticated
     @RolesAllowed({"RESPONSAVEL","ADMINISTRADOR"})
     public Response delete(@PathParam("id") Long id) throws MyEntityNotFoundException {
         tagBean.delete(id);

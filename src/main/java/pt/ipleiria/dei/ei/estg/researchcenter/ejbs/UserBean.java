@@ -49,6 +49,21 @@ public class UserBean {
     }
 
     /**
+     * Searches users by name (case-insensitive, contains).
+     * Limited to 20 results to avoid returning too many records for autocomplete.
+     */
+    public List<User> searchByName(String q) {
+        if (q == null || q.isBlank()) {
+            return findAll();
+        }
+        String pattern = "%" + q.toLowerCase() + "%";
+        return em.createQuery("SELECT u FROM User u WHERE LOWER(u.name) LIKE :pattern ORDER BY u.name", User.class)
+                 .setParameter("pattern", pattern)
+                 .setMaxResults(20)
+                 .getResultList();
+    }
+
+    /**
      * Creates a new user based on the specified role.
      * EP03 - Criar Utilizador
      */

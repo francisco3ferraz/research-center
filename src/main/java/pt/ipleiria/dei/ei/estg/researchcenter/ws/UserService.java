@@ -9,6 +9,9 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import pt.ipleiria.dei.ei.estg.researchcenter.dtos.ActivityLogDTO;
 import pt.ipleiria.dei.ei.estg.researchcenter.dtos.UserDTO;
+import pt.ipleiria.dei.ei.estg.researchcenter.dtos.UserSummaryDTO;
+import java.util.List;
+import java.util.stream.Collectors;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.ActivityLogBean;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.UserBean;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.UserRole;
@@ -39,6 +42,14 @@ public class UserService {
     public Response getAll() {
         var users = userBean.findAll();
         return Response.ok(UserDTO.from(users)).build();
+    }
+
+    @GET
+    @Path("/lookup")
+    public Response lookup(@QueryParam("q") String q) {
+        var users = userBean.searchByName(q);
+        var dtos = users.stream().map(UserSummaryDTO::from).collect(Collectors.toList());
+        return Response.ok(dtos).build();
     }
 
     @GET

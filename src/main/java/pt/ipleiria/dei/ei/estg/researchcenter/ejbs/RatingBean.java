@@ -55,6 +55,43 @@ public class RatingBean {
             throw new MyConstraintViolationException(e);
         }
     }
+
+    /**
+     * EP17 - Add or update user's rating for a publication.
+     * If a rating exists, it is updated; otherwise, it is created.
+     */
+    public Rating upsert(int stars, Long userId, Long publicationId)
+            throws MyEntityNotFoundException, MyConstraintViolationException {
+
+        var user = collaboratorBean.find(userId);
+        var publication = publicationBean.find(publicationId);
+
+        var existing = em.createQuery(
+                        "SELECT r FROM Rating r WHERE r.user = :user AND r.publication = :publication",
+                        Rating.class)
+                .setParameter("user", user)
+                .setParameter("publication", publication)
+                .getResultList();
+
+        try {
+            if (!existing.isEmpty()) {
+                var r = existing.get(0);
+                em.lock(r, jakarta.persistence.LockModeType.OPTIMISTIC);
+                r.setStars(stars);
+                em.flush();
+                return r;
+            }
+
+            var rating = new Rating(stars, user, publication);
+            em.persist(rating);
+            em.flush();
+            user.addRating(rating);
+            publication.addRating(rating);
+            return rating;
+        } catch (ConstraintViolationException e) {
+            throw new MyConstraintViolationException(e);
+        }
+    }
     
     public Rating find(Long id) throws MyEntityNotFoundException {
         var rating = em.find(Rating.class, id);

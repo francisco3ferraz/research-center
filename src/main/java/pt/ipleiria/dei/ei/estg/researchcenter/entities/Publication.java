@@ -58,6 +58,15 @@ public class Publication implements Serializable {
     private boolean visible = true;
     
     private boolean confidential = false;
+
+    // Total number of views for this publication (used by statistics/top-publications)
+    private long viewsCount = 0;
+
+    @ManyToOne
+    @JoinColumn(name = "hidden_by_user_id")
+    private User hiddenBy;
+
+    private LocalDateTime hiddenAt;
     
     @NotNull
     private LocalDateTime uploadedAt;
@@ -216,6 +225,34 @@ public class Publication implements Serializable {
     
     public void setConfidential(boolean confidential) {
         this.confidential = confidential;
+    }
+
+    public long getViewsCount() {
+        return viewsCount;
+    }
+
+    public void setViewsCount(long viewsCount) {
+        this.viewsCount = viewsCount;
+    }
+
+    public void incrementViews() {
+        this.viewsCount++;
+    }
+
+    public User getHiddenBy() {
+        return hiddenBy;
+    }
+
+    public void setHiddenBy(User hiddenBy) {
+        this.hiddenBy = hiddenBy;
+    }
+
+    public LocalDateTime getHiddenAt() {
+        return hiddenAt;
+    }
+
+    public void setHiddenAt(LocalDateTime hiddenAt) {
+        this.hiddenAt = hiddenAt;
     }
     
     public LocalDateTime getUploadedAt() {

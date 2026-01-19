@@ -5,6 +5,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "ratings",
@@ -30,6 +31,9 @@ public class Rating implements Serializable {
     @JoinColumn(name = "publication_id")
     private Publication publication;
 
+    @NotNull
+    private LocalDateTime createdAt;
+
     @Version
     private int version;
 
@@ -42,6 +46,7 @@ public class Rating implements Serializable {
         this.stars = stars;
         this.user = user;
         this.publication = publication;
+        this.createdAt = LocalDateTime.now();
     }
 
     // Getters and Setters
@@ -75,6 +80,14 @@ public class Rating implements Serializable {
 
     public void setPublication(Publication publication) {
         this.publication = publication;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
     }
 
     public int getVersion() {

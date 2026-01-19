@@ -13,8 +13,9 @@ public class CommentDTO implements Serializable {
     @jakarta.json.bind.annotation.JsonbProperty("content")
     private String text;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private boolean visible;
-    private CollaboratorDTO author;
+    private UserSummaryDTO author;
     private Long publicationId;
 
     // Default constructor
@@ -22,11 +23,12 @@ public class CommentDTO implements Serializable {
     }
 
     // Constructor with parameters
-    public CommentDTO(Long id, String text, LocalDateTime createdAt, boolean visible,
-                      CollaboratorDTO author, Long publicationId) {
+    public CommentDTO(Long id, String text, LocalDateTime createdAt, LocalDateTime updatedAt, boolean visible,
+                      UserSummaryDTO author, Long publicationId) {
         this.id = id;
         this.text = text;
         this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
         this.visible = visible;
         this.author = author;
         this.publicationId = publicationId;
@@ -57,6 +59,14 @@ public class CommentDTO implements Serializable {
         this.createdAt = createdAt;
     }
 
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
     public boolean isVisible() {
         return visible;
     }
@@ -65,11 +75,11 @@ public class CommentDTO implements Serializable {
         this.visible = visible;
     }
 
-    public CollaboratorDTO getAuthor() {
+    public UserSummaryDTO getAuthor() {
         return author;
     }
 
-    public void setAuthor(CollaboratorDTO author) {
+    public void setAuthor(UserSummaryDTO author) {
         this.author = author;
     }
 
@@ -87,8 +97,9 @@ public class CommentDTO implements Serializable {
             comment.getId(),
             comment.getText(),
             comment.getCreatedAt(),
+            comment.getUpdatedAt(),
             comment.isVisible(),
-            CollaboratorDTO.from(comment.getAuthor()),
+            UserSummaryDTO.from(comment.getAuthor()),
             comment.getPublication().getId()
         );
     }

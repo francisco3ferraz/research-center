@@ -35,6 +35,7 @@ public class AuthService {
     @Path("/login")
     public Response authenticate(@Valid AuthDTO auth) {
         if (userBean.canLogin(auth.getUsername(), auth.getPassword())) {
+            userBean.updateLastLogin(auth.getUsername());
             String token = TokenIssuer.issue(auth.getUsername());
             return Response.ok(Map.of("token", token)).build();
         }

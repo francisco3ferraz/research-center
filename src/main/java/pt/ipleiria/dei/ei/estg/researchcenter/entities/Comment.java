@@ -24,6 +24,12 @@ public class Comment implements Serializable {
     private LocalDateTime updatedAt;
     
     private boolean visible = true;
+
+    @ManyToOne
+    @JoinColumn(name = "hidden_by_user_id")
+    private User hiddenBy;
+
+    private LocalDateTime hiddenAt;
     
     @ManyToOne
     @NotNull
@@ -111,5 +117,21 @@ public class Comment implements Serializable {
     
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public User getHiddenBy() {
+        return hiddenBy;
+    }
+
+    public void setHiddenBy(User hiddenBy) {
+        this.hiddenBy = hiddenBy;
+    }
+
+    public LocalDateTime getHiddenAt() {
+        return hiddenAt;
+    }
+
+    public void setHiddenAt(LocalDateTime hiddenAt) {
+        this.hiddenAt = hiddenAt;
     }
 }

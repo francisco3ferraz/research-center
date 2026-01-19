@@ -135,7 +135,7 @@ public class CollaboratorDTO implements Serializable {
 
     public static CollaboratorDTO fromWithTags(Collaborator collaborator) {
         var dto = from(collaborator);
-        dto.setSubscribedTags(TagDTO.fromSimple(collaborator.getSubscribedTags()));
+        dto.setSubscribedTags(TagDTO.from(collaborator.getSubscribedTags()));
         return dto;
     }
 

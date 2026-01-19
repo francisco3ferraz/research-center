@@ -1,10 +1,7 @@
 package pt.ipleiria.dei.ei.estg.researchcenter.ws;
 
-import jakarta.ejb.EJB;
-import jakarta.ws.rs.GET;
-import jakarta.ws.rs.POST;
-import jakarta.ws.rs.PUT;
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.annotation.security.PermitAll;
 import jakarta.ejb.EJB;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
@@ -37,7 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 import pt.ipleiria.dei.ei.estg.researchcenter.dtos.PublicationDTO;
-import pt.ipleiria.dei.ei.estg.researchcenter.dtos.TagDTO;
+import pt.ipleiria.dei.ei.estg.researchcenter.dtos.TagSimpleDTO;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.Publication;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.CollaboratorBean;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.DocumentBean;
@@ -45,6 +42,7 @@ import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.PublicationBean;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.UserBean;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.ActivityLogBean;
 import pt.ipleiria.dei.ei.estg.researchcenter.dtos.ActivityLogDTO;
+import pt.ipleiria.dei.ei.estg.researchcenter.dtos.PublicationHistoryEntryDTO;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
 import pt.ipleiria.dei.ei.estg.researchcenter.security.Authenticated;
 import pt.ipleiria.dei.ei.estg.researchcenter.security.RequireOwnership;
@@ -82,12 +80,15 @@ public class PublicationService {
     }
     
     @GET
+    @PermitAll
     public Response getAll(
             @QueryParam("search") String search,
             @QueryParam("areaScientific") String areaScientific,
             @QueryParam("tag") Long tagId,
             @QueryParam("dateFrom") String dateFromStr,
             @QueryParam("dateTo") String dateToStr,
+            @QueryParam("sortBy") String sortBy,
+            @QueryParam("order") String order,
             @QueryParam("page") @DefaultValue("0") int page,
             @QueryParam("size") @DefaultValue("10") int size
     ) {
@@ -106,8 +107,13 @@ public class PublicationService {
             // ignore parse errors and treat as null
         }
 
-        var pubs = publicationBean.findWithFilters(search, areaScientific, tagId, dateFrom, dateTo, page, size);
-        long total = publicationBean.countWithFilters(search, areaScientific, tagId, dateFrom, dateTo);
+        boolean isGuest = securityContext.getUserPrincipal() == null;
+        var pubs = isGuest
+                ? publicationBean.findPublicWithFiltersSorted(search, areaScientific, tagId, dateFrom, dateTo, sortBy, order, page, size)
+                : publicationBean.findWithFiltersSorted(search, areaScientific, tagId, dateFrom, dateTo, sortBy, order, page, size);
+        long total = isGuest
+                ? publicationBean.countPublicWithFilters(search, areaScientific, tagId, dateFrom, dateTo)
+                : publicationBean.countWithFilters(search, areaScientific, tagId, dateFrom, dateTo);
         int totalPages = size > 0 ? (int) ((total + size - 1) / size) : 1;
         var content = PublicationDTO.from(pubs);
         var result = Map.of(
@@ -122,9 +128,192 @@ public class PublicationService {
     
     @GET
     @Path("/{id}")
+    @PermitAll
     public Response get(@PathParam("id") Long id) throws Exception {
-        var dto = publicationBean.getDTOWithDetails(id);
-        return Response.ok(dto).build();
+        var pub = publicationBean.findWithDetails(id);
+        boolean isGuest = securityContext.getUserPrincipal() == null;
+        if (isGuest) {
+            // Guests can only access visible + non-confidential publications (enunciado: confidential not available externally)
+            if (!pub.isVisible() || pub.isConfidential()) {
+                return Response.status(Response.Status.FORBIDDEN)
+                        .entity(Map.of("message", "Publicação não disponível para convidados"))
+                        .build();
+            }
+        }
+        // Track views for statistics/top-publications
+        publicationBean.incrementViews(id);
+        return Response.ok(PublicationDTO.fromWithDetails(pub)).build();
+    }
+
+    /**
+     * EP46 - Advanced search (best-effort; final contract depends on the provided PDF spec)
+     * POST /api/publications/advanced-search
+     */
+    @POST
+    @Path("/advanced-search")
+    @Authenticated
+    public Response advancedSearch(String rawBody,
+                                  @QueryParam("page") @DefaultValue("0") int page,
+                                  @QueryParam("size") @DefaultValue("20") int size) throws Exception {
+        Jsonb jsonb = JsonbBuilder.create();
+        Map<?, ?> body;
+        try {
+            body = rawBody != null && !rawBody.isBlank() ? jsonb.fromJson(rawBody, Map.class) : Map.of();
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("message", "invalid json", "error", e.getMessage()))
+                    .build();
+        } finally {
+            try { jsonb.close(); } catch (Exception ignored) {}
+        }
+
+        List<String> keywords = extractStringList(body, "keywords");
+        List<String> authors = extractStringList(body, "authors");
+        List<String> typesRaw = extractStringList(body, "types");
+        List<pt.ipleiria.dei.ei.estg.researchcenter.entities.PublicationType> types = new java.util.ArrayList<>();
+        if (typesRaw != null) {
+            for (String t : typesRaw) {
+                try { types.add(pt.ipleiria.dei.ei.estg.researchcenter.entities.PublicationType.valueOf(t)); } catch (Exception ignore) {}
+            }
+        }
+        List<Long> scientificAreas = extractLongList(body, "scientificAreas");
+        List<Long> tags = extractLongList(body, "tags");
+        Integer yearFrom = extractInt(body, "yearFrom");
+        Integer yearTo = extractInt(body, "yearTo");
+        Double minRating = extractDouble(body, "minRating");
+        Boolean hasComments = extractBoolean(body, "hasComments");
+        Boolean confidential = extractBoolean(body, "confidential");
+        String sortBy = body != null && body.get("sortBy") != null ? body.get("sortBy").toString() : null;
+        String order = body != null && body.get("order") != null ? body.get("order").toString() : null;
+        Integer pageBody = extractInt(body, "page");
+        Integer sizeBody = extractInt(body, "size");
+        int p = pageBody != null ? pageBody : page;
+        int s = sizeBody != null ? sizeBody : size;
+
+        var pubs = publicationBean.advancedSearch(keywords, authors, types, scientificAreas, tags, yearFrom, yearTo, minRating, hasComments, confidential, sortBy, order, p, s);
+        long total = publicationBean.countAdvancedSearch(keywords, authors, types, scientificAreas, tags, yearFrom, yearTo, minRating, hasComments, confidential);
+        int totalPages = s > 0 ? (int) ((total + s - 1) / s) : 1;
+
+        return Response.ok(Map.of(
+                "content", PublicationDTO.from(pubs),
+                "totalElements", total,
+                "totalPages", totalPages,
+                "currentPage", p,
+                "pageSize", s
+        )).build();
+    }
+
+    private static List<String> extractStringList(Map<?, ?> body, String key) {
+        if (body == null || !body.containsKey(key) || body.get(key) == null) return null;
+        Object v = body.get(key);
+        if (v instanceof List) {
+            return ((List<?>) v).stream().map(Object::toString).map(String::trim).filter(s -> !s.isBlank()).toList();
+        }
+        return List.of(v.toString());
+    }
+
+    private static List<Long> extractLongList(Map<?, ?> body, String key) {
+        if (body == null || !body.containsKey(key) || body.get(key) == null) return null;
+        Object v = body.get(key);
+        if (v instanceof List) {
+            return ((List<?>) v).stream().map(o -> {
+                if (o instanceof Number) return ((Number) o).longValue();
+                return Long.parseLong(o.toString());
+            }).toList();
+        }
+        if (v instanceof Number) return List.of(((Number) v).longValue());
+        return List.of(Long.parseLong(v.toString()));
+    }
+
+    private static Integer extractInt(Map<?, ?> body, String key) {
+        if (body == null || !body.containsKey(key) || body.get(key) == null) return null;
+        Object v = body.get(key);
+        if (v instanceof Number) return ((Number) v).intValue();
+        try { return Integer.parseInt(v.toString()); } catch (Exception e) { return null; }
+    }
+
+    private static Double extractDouble(Map<?, ?> body, String key) {
+        if (body == null || !body.containsKey(key) || body.get(key) == null) return null;
+        Object v = body.get(key);
+        if (v instanceof Number) return ((Number) v).doubleValue();
+        try { return Double.parseDouble(v.toString()); } catch (Exception e) { return null; }
+    }
+
+    private static Boolean extractBoolean(Map<?, ?> body, String key) {
+        if (body == null || !body.containsKey(key) || body.get(key) == null) return null;
+        Object v = body.get(key);
+        if (v instanceof Boolean) return (Boolean) v;
+        return Boolean.parseBoolean(v.toString());
+    }
+
+    /**
+     * EP47 - Export publications (best-effort)
+     * GET /api/publications/export?format=csv|json + same filters as list
+     */
+    @GET
+    @Path("/export")
+    @Authenticated
+    @Produces({MediaType.APPLICATION_JSON, "text/csv"})
+    public Response exportPublications(@QueryParam("format") @DefaultValue("csv") String format,
+                                       @QueryParam("search") String search,
+                                       @QueryParam("areaScientific") String areaScientific,
+                                       @QueryParam("tag") Long tagId,
+                                       @QueryParam("dateFrom") String dateFromStr,
+                                       @QueryParam("dateTo") String dateToStr,
+                                       @QueryParam("sortBy") String sortBy,
+                                       @QueryParam("order") String order) {
+        java.time.LocalDateTime dateFrom = null;
+        java.time.LocalDateTime dateTo = null;
+        try {
+            if (dateFromStr != null && !dateFromStr.isBlank()) {
+                var odt = java.time.OffsetDateTime.parse(dateFromStr);
+                dateFrom = odt.withOffsetSameInstant(java.time.ZoneOffset.UTC).toLocalDateTime();
+            }
+            if (dateToStr != null && !dateToStr.isBlank()) {
+                var odt2 = java.time.OffsetDateTime.parse(dateToStr);
+                dateTo = odt2.withOffsetSameInstant(java.time.ZoneOffset.UTC).toLocalDateTime();
+            }
+        } catch (Exception ignore) {}
+
+        // Export all matching (no pagination)
+        var pubs = publicationBean.findWithFiltersSorted(search, areaScientific, tagId, dateFrom, dateTo, sortBy, order, 0, 0);
+        var dtos = PublicationDTO.from(pubs);
+
+        if ("json".equalsIgnoreCase(format)) {
+            return Response.ok(dtos).build();
+        }
+
+        StreamingOutput stream = output -> {
+            String header = "id,title,type,areaScientific,year,averageRating,ratingsCount,commentsCount,viewsCount\r\n";
+            output.write(header.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            for (PublicationDTO p : dtos) {
+                String line = String.format("%d,%s,%s,%s,%d,%.2f,%d,%d,%d\r\n",
+                        p.getId() != null ? p.getId() : 0,
+                        escapeCsv(p.getTitle()),
+                        p.getType() != null ? p.getType().name() : "",
+                        escapeCsv(p.getAreaScientific()),
+                        p.getYear() != null ? p.getYear() : 0,
+                        p.getAverageRating(),
+                        p.getRatingsCount(),
+                        p.getCommentsCount(),
+                        p.getViewsCount()
+                );
+                output.write(line.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+        };
+
+        return Response.ok(stream, "text/csv")
+                .header("Content-Disposition", "attachment; filename=\"publications.csv\"")
+                .build();
+    }
+
+    private static String escapeCsv(String v) {
+        if (v == null) return "";
+        String s = v.replace("\"", "\"\"");
+        if (s.contains(",") || s.contains("\"") || s.contains("\n") || s.contains("\r")) {
+            return "\"" + s + "\"";
+        }
+        return s;
     }
     
     @GET
@@ -239,6 +428,14 @@ public class PublicationService {
             dto.getAbstract_(),
             uploaderId
         );
+
+        // Activity log for publication creation
+        try {
+            var user = userBean.findByUsername(username);
+            if (user != null) {
+                activityLogBean.create(user, "CREATE", "PUBLICATION", publication.getId(), "Publicação criada");
+            }
+        } catch (Exception ignore) {}
         
         // Set optional fields if provided
         if (dto.getPublisher() != null || dto.getDoi() != null || dto.getAiGeneratedSummary() != null) {
@@ -256,7 +453,7 @@ public class PublicationService {
 
         // Attach tags if provided in metadata
         if (dto.getTags() != null) {
-            for (TagDTO t : dto.getTags()) {
+            for (TagSimpleDTO t : dto.getTags()) {
                 if (t != null && t.getId() != null) publicationBean.addTag(publication.getId(), t.getId());
             }
         }
@@ -310,6 +507,12 @@ public class PublicationService {
             dto.getAbstract_(),
             uploaderId
         );
+        try {
+            var user = userBean.findByUsername(username);
+            if (user != null) {
+                activityLogBean.create(user, "CREATE", "PUBLICATION", publication.getId(), "Publicação criada");
+            }
+        } catch (Exception ignore) {}
 
         if (dto.getPublisher() != null || dto.getDoi() != null || dto.getAiGeneratedSummary() != null) {
             publicationBean.update(
@@ -326,7 +529,7 @@ public class PublicationService {
 
         // Attach tags if provided
         if (dto.getTags() != null) {
-            for (TagDTO t : dto.getTags()) {
+            for (TagSimpleDTO t : dto.getTags()) {
                 if (t != null && t.getId() != null) publicationBean.addTag(publication.getId(), t.getId());
             }
         }
@@ -371,13 +574,37 @@ public class PublicationService {
             dto.getPublisher(),
             dto.getDoi()
         );
+
+        // Activity log for update (best-effort: changed fields from non-null inputs)
+        try {
+            String username = securityContext.getUserPrincipal().getName();
+            var user = userBean.findByUsername(username);
+            if (user != null) {
+                var fields = new java.util.ArrayList<String>();
+                if (dto.getTitle() != null) fields.add("title");
+                if (dto.getAuthors() != null) fields.add("authors");
+                if (dto.getAbstract_() != null) fields.add("abstract");
+                if (dto.getAiGeneratedSummary() != null) fields.add("aiGeneratedSummary");
+                if (dto.getYear() != null) fields.add("year");
+                if (dto.getPublisher() != null) fields.add("publisher");
+                if (dto.getDoi() != null) fields.add("doi");
+                activityLogBean.createWithChangedFields(
+                        user,
+                        "UPDATE",
+                        "PUBLICATION",
+                        id,
+                        "Publicação atualizada",
+                        String.join(",", fields)
+                );
+            }
+        } catch (Exception ignore) {}
+
         var resultDto = publicationBean.getDTOWithDetails(id);
         return Response.ok(resultDto).build();
     }
     
     @DELETE
-    @Authenticated
-    @RequireOwnership(parameterName = "id", bypassRoles = {"RESPONSAVEL","ADMINISTRADOR"})
+    @RolesAllowed({"RESPONSAVEL","ADMINISTRADOR"})
     @Path("/{id}")
     public Response delete(@PathParam("id") Long id) throws Exception {
         
@@ -419,12 +646,15 @@ public class PublicationService {
         else tagId = Long.parseLong(v.toString());
         publicationBean.addTag(id, tagId);
         var publication = publicationBean.findWithDetails(id);
-        return Response.ok(PublicationDTO.fromWithDetails(publication)).build();
+        return Response.ok(Map.of(
+                "publicationId", id,
+                "tags", TagSimpleDTO.from(publication.getTags())
+        )).build();
     }
     
     @DELETE
     @Authenticated
-    @RolesAllowed({"RESPONSAVEL","ADMINISTRADOR"})
+    @RequireOwnership(parameterName = "id", bypassRoles = {"RESPONSAVEL","ADMINISTRADOR"})
     @Path("/{id}/tags/{tagId}")
     public Response removeTag(@PathParam("id") Long id, @PathParam("tagId") Long tagId) throws Exception {
         publicationBean.removeTag(id, tagId);
@@ -434,6 +664,7 @@ public class PublicationService {
     @GET
     @Path("/{id}/file")
     @Produces({MediaType.APPLICATION_OCTET_STREAM})
+    @Authenticated
     public Response downloadFile(@PathParam("id") Long id) throws Exception {
         var document = documentBean.findByPublication(id);
         java.nio.file.Path path = Paths.get(document.getFilepath());
@@ -459,6 +690,7 @@ public class PublicationService {
     // Spec typo compatibility: accept 'visiblity' path as well (PATCH may be unsupported by some servers)
     @POST
     @Authenticated
+    @RolesAllowed({"RESPONSAVEL","ADMINISTRADOR"})
     @Path("/{id}/visibility")
     @Consumes({MediaType.APPLICATION_JSON})
     public Response setVisibilitySpec(@PathParam("id") Long id, String rawBody) throws Exception {
@@ -479,7 +711,21 @@ public class PublicationService {
         Object v = body.get("visible");
         if (v instanceof Boolean) visible = (Boolean) v;
         else visible = Boolean.parseBoolean(v.toString());
-        publicationBean.setVisibility(id, visible);
+        String username = securityContext.getUserPrincipal().getName();
+        publicationBean.setVisibility(id, visible, username);
+        try {
+            var user = userBean.findByUsername(username);
+            if (user != null) {
+                activityLogBean.createWithChangedFields(
+                        user,
+                        "UPDATE",
+                        "PUBLICATION",
+                        id,
+                        visible ? "Publicação mostrada" : "Publicação ocultada",
+                        "visible"
+                );
+            }
+        } catch (Exception ignore) {}
         var pub = publicationBean.find(id);
         var updatedAt = pub.getUpdatedAt() != null ? pub.getUpdatedAt().atOffset(java.time.ZoneOffset.UTC) : null;
         var res = Map.of(
@@ -491,12 +737,23 @@ public class PublicationService {
         return Response.ok(res).build();
     }
 
+    // Spec path typo: /visiblity (PATCH)
+    @PATCH
+    @Authenticated
+    @RolesAllowed({"RESPONSAVEL","ADMINISTRADOR"})
+    @Path("/{id}/visiblity")
+    @Consumes({MediaType.APPLICATION_JSON})
+    public Response setVisibilitySpecTypo(@PathParam("id") Long id, String rawBody) throws Exception {
+        return setVisibilitySpec(id, rawBody);
+    }
+
     @GET
     @Path("/{id}/history")
     @Authenticated
     public Response getPublicationHistory(@PathParam("id") Long id) throws Exception {
         var logs = activityLogBean.getPublicationHistory(id);
-        return Response.ok(ActivityLogDTO.from(logs)).build();
+        var mapped = logs.stream().map(PublicationHistoryEntryDTO::from).toList();
+        return Response.ok(mapped).build();
     }
 
     @EJB
@@ -550,6 +807,7 @@ public class PublicationService {
 
     @GET
     @Path("/{id}/comments")
+    @PermitAll
     public Response getComments(@PathParam("id") Long id) throws Exception {
         var comments = commentBean.findByPublication(id);
         return Response.ok(pt.ipleiria.dei.ei.estg.researchcenter.dtos.CommentDTO.from(comments)).build();
@@ -591,15 +849,36 @@ public class PublicationService {
         if (username == null) throw new jakarta.ws.rs.NotAuthorizedException("Authentication required");
         var author = collaboratorBean.findByUsername(username);
 
-        var rating = ratingBean.create(value, author.getId(), id);
-        return Response.status(Response.Status.CREATED).entity(RatingDTO.from(rating)).build();
+        var rating = ratingBean.upsert(value, author.getId(), id);
+        // Spec doesn't differentiate create vs update status; return OK with rating payload
+        return Response.ok(RatingDTO.from(rating)).build();
     }
 
     @GET
     @Path("/{id}/ratings")
+    @PermitAll
     public Response getRatings(@PathParam("id") Long id) throws Exception {
         var ratings = ratingBean.findByPublication(id);
-        return Response.ok(RatingDTO.from(ratings)).build();
+        // Spec: wrapper with averageRating, totalRatings, distribution, ratings[]
+        double avg = 0.0;
+        int total = ratings != null ? ratings.size() : 0;
+        if (total > 0) {
+            avg = ratings.stream().mapToInt(pt.ipleiria.dei.ei.estg.researchcenter.entities.Rating::getStars).average().orElse(0.0);
+        }
+        java.util.Map<String, Integer> dist = new java.util.HashMap<>();
+        for (int i = 1; i <= 5; i++) dist.put(String.valueOf(i), 0);
+        if (ratings != null) {
+            for (var r : ratings) {
+                String k = String.valueOf(r.getStars());
+                dist.put(k, dist.getOrDefault(k, 0) + 1);
+            }
+        }
+        return Response.ok(java.util.Map.of(
+                "averageRating", avg,
+                "totalRatings", total,
+                "distribution", dist,
+                "ratings", RatingDTO.from(ratings)
+        )).build();
     }
 
     @DELETE
@@ -610,6 +889,6 @@ public class PublicationService {
         if (username == null) throw new jakarta.ws.rs.NotAuthorizedException("Authentication required");
         var user = collaboratorBean.findByUsername(username);
         ratingBean.deleteByUserAndPublication(user.getId(), id);
-        return Response.ok(Map.of("message", "Avaliação removida com sucesso")).build();
+        return Response.ok(Map.of("message", "Rating removido com sucesso")).build();
     }
 }

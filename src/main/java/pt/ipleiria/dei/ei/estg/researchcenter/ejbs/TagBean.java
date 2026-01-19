@@ -4,6 +4,7 @@ import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.validation.ConstraintViolationException;
+import jakarta.persistence.PersistenceException;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.Tag;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.Publication;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.Collaborator;
@@ -41,6 +42,19 @@ public class TagBean {
             return tag;
         } catch (ConstraintViolationException e) {
             throw new MyConstraintViolationException(e);
+        } catch (PersistenceException pe) {
+            // Database-level constraint (e.g. unique index) may throw a PersistenceException wrapping
+            // a vendor-specific ConstraintViolationException. Convert to a friendly MyEntityExistsException
+            // when it looks like a uniqueness violation, otherwise wrap as MyConstraintViolationException.
+            String msg = pe.getMessage() != null ? pe.getMessage().toLowerCase() : "";
+            Throwable cause = pe.getCause();
+            String causeName = cause != null ? cause.getClass().getName().toLowerCase() : "";
+
+            if (msg.contains("constraint") || msg.contains("unique") || causeName.contains("constraintviolation") || causeName.contains("constraintviolationexception") || causeName.contains("constraintviolation")) {
+                throw new MyEntityExistsException("Tag '" + name + "' already exists");
+            }
+
+            throw new MyConstraintViolationException(pe);
         }
     }
     

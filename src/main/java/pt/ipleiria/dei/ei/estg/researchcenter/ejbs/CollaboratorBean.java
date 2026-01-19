@@ -6,6 +6,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.validation.ConstraintViolationException;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.Collaborator;
+import pt.ipleiria.dei.ei.estg.researchcenter.entities.Tag;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyConstraintViolationException;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityExistsException;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
@@ -63,6 +64,23 @@ public class CollaboratorBean {
         }
         return collaborators.get(0);
     }
+
+    /**
+     * Find a collaborator using the security principal value. Many setups
+     * use either the username or the email as the principal name, so try
+     * both to be resilient.
+     */
+    public Collaborator findByPrincipal(String principal) throws MyEntityNotFoundException {
+        try {
+            return findByUsername(principal);
+        } catch (MyEntityNotFoundException e) {
+            var byEmail = em.createQuery("SELECT c FROM Collaborator c WHERE c.email = :email", Collaborator.class)
+                            .setParameter("email", principal)
+                            .getResultList();
+            if (!byEmail.isEmpty()) return byEmail.get(0);
+            throw new MyEntityNotFoundException("Collaborator '" + principal + "' not found");
+        }
+    }
     
     public List<Collaborator> findAll() {
         return em.createQuery("SELECT c FROM Collaborator c ORDER BY c.name", Collaborator.class)
@@ -118,6 +136,8 @@ public class CollaboratorBean {
         
         collaborator.addSubscribedTag(tag);
         tag.addSubscriber(collaborator);
+        // Ensure changes are flushed to the database in this transaction
+        em.flush();
     }
     
     public void unsubscribeFromTag(Long collaboratorId, Long tagId) 
@@ -127,5 +147,25 @@ public class CollaboratorBean {
         
         collaborator.removeSubscribedTag(tag);
         tag.removeSubscriber(collaborator);
+        // Ensure changes are flushed to the database in this transaction
+        em.flush();
+    }
+
+    /**
+     * Return the subscribed tags for the given collaborator id, ensuring
+     * that collections needed for DTO serialization (e.g. publications)
+     * are initialized while still inside the EJB transaction.
+     */
+    public java.util.List<Tag> getSubscribedTagsWithPubs(Long collaboratorId) throws MyEntityNotFoundException {
+        var collaborator = find(collaboratorId);
+        var tags = collaborator.getSubscribedTags();
+        // ensure the collection is initialized
+        tags.size();
+        // initialize publications for each tag so DTO mapping can safely access size()
+        for (Tag t : tags) {
+            var pubs = t.getPublications();
+            if (pubs != null) pubs.size();
+        }
+        return tags;
     }
 }

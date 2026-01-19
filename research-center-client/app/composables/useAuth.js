@@ -12,6 +12,32 @@ export const useAuth = () => {
         }
     }
 
+    // Login using backend API; expects response containing { token, user }
+    const loginWithCredentials = async (credentials) => {
+        try {
+            const api = useApi()
+            const resp = await api.post('/auth/login', credentials)
+            const data = resp.data || resp
+            if (data.token) {
+                // store token first so api interceptor can attach it
+                login(data.token, null)
+                try {
+                    const userResp = await api.get('/auth/user')
+                    const userData = userResp.data
+                    // update stored user
+                    login(data.token, userData)
+                    return { token: data.token, user: userData }
+                } catch (e) {
+                    // If fetching user fails, still return token
+                    return { token: data.token }
+                }
+            }
+            return data
+        } catch (e) {
+            throw e
+        }
+    }
+
     const logout = () => {
         token.value = null
         user.value = null
@@ -43,6 +69,7 @@ export const useAuth = () => {
         token,
         user,
         login,
+        loginWithCredentials,
         logout,
         initAuth
     }

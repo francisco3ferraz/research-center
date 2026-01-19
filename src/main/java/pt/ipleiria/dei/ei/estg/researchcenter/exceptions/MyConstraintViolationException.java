@@ -9,6 +9,10 @@ public class MyConstraintViolationException extends Exception {
         super(getConstraintViolationMessages(e));
     }
 
+    public MyConstraintViolationException(Throwable t) {
+        super(t == null ? "Constraint violation" : t.getMessage(), t);
+    }
+
     private static String getConstraintViolationMessages(ConstraintViolationException e) {
         return e.getConstraintViolations()
                 .stream()

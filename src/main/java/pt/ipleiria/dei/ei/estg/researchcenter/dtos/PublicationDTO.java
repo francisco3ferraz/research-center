@@ -6,7 +6,6 @@ import pt.ipleiria.dei.ei.estg.researchcenter.entities.PublicationType;
 import java.io.Serializable;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import pt.ipleiria.dei.ei.estg.researchcenter.dtos.CollaboratorDTO;
 import java.util.List;
 import java.util.stream.Collectors;
 import jakarta.json.bind.annotation.JsonbProperty;
@@ -30,12 +29,15 @@ public class PublicationDTO implements Serializable {
     private boolean confidential;
     private OffsetDateTime uploadedAt;
     private OffsetDateTime updatedAt;
-    private CollaboratorDTO uploadedBy;
-    private List<TagDTO> tags;
+    // Spec uses a minimal representation: { "id": X, "name": "..." }
+    private UserSummaryDTO uploadedBy;
+    // Spec uses tags as simple {id,name} in publication list/detail
+    private List<TagSimpleDTO> tags;
     private List<CommentDTO> comments;
     private double averageRating;
     private int ratingsCount;
     private int commentsCount;
+    private long viewsCount;
     private Long documentId;
     private String documentFilename;
     private String fileUrl;
@@ -48,7 +50,7 @@ public class PublicationDTO implements Serializable {
     public PublicationDTO(Long id, String title, List<String> authors, PublicationType type,
                          String areaScientific, Integer year, String abstract_,
                          boolean visible, boolean confidential,
-                         OffsetDateTime uploadedAt, CollaboratorDTO uploadedBy) {
+                         OffsetDateTime uploadedAt, UserSummaryDTO uploadedBy) {
         this.id = id;
         this.title = title;
         this.authors = authors;
@@ -177,19 +179,19 @@ public class PublicationDTO implements Serializable {
         this.updatedAt = updatedAt;
     }
 
-    public CollaboratorDTO getUploadedBy() {
+    public UserSummaryDTO getUploadedBy() {
         return uploadedBy;
     }
 
-    public void setUploadedBy(CollaboratorDTO uploadedBy) {
+    public void setUploadedBy(UserSummaryDTO uploadedBy) {
         this.uploadedBy = uploadedBy;
     }
     
-    public List<TagDTO> getTags() {
+    public List<TagSimpleDTO> getTags() {
         return tags;
     }
     
-    public void setTags(List<TagDTO> tags) {
+    public void setTags(List<TagSimpleDTO> tags) {
         this.tags = tags;
     }
     
@@ -223,6 +225,14 @@ public class PublicationDTO implements Serializable {
     
     public void setCommentsCount(int commentsCount) {
         this.commentsCount = commentsCount;
+    }
+
+    public long getViewsCount() {
+        return viewsCount;
+    }
+
+    public void setViewsCount(long viewsCount) {
+        this.viewsCount = viewsCount;
     }
     
     public Long getDocumentId() {
@@ -270,7 +280,7 @@ public class PublicationDTO implements Serializable {
             publication.isVisible(),
             publication.isConfidential(),
             up,
-            publication.getUploadedBy() != null ? CollaboratorDTO.from(publication.getUploadedBy()) : null
+            publication.getUploadedBy() != null ? UserSummaryDTO.from(publication.getUploadedBy()) : null
         );
 
         dto.setPublisher(publication.getPublisher());
@@ -280,6 +290,9 @@ public class PublicationDTO implements Serializable {
         dto.setAverageRating(publication.getAverageRating());
         dto.setRatingsCount(publication.getRatings().size());
         dto.setCommentsCount(publication.getComments().size());
+        dto.setViewsCount(publication.getViewsCount());
+        // tags for list/detail
+        dto.setTags(TagSimpleDTO.from(publication.getTags()));
 
         if (publication.getDocument() != null) {
             dto.setDocumentId(publication.getDocument().getId());
@@ -292,7 +305,6 @@ public class PublicationDTO implements Serializable {
     
     public static PublicationDTO fromWithDetails(Publication publication) {
         var dto = from(publication);
-        dto.setTags(TagDTO.fromSimple(publication.getTags()));
         dto.setComments(CommentDTO.from(
             publication.getComments().stream()
                       .filter(c -> c.isVisible())

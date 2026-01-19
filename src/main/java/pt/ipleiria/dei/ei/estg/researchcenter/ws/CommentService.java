@@ -86,12 +86,9 @@ public class CommentService {
         var comment = commentBean.find(id);
         String username = securityContext.getUserPrincipal().getName();
 
-        // Allow deletion if owner OR if admin/manager
+        // Spec: user can remove their own comment
         boolean isOwner = comment.getAuthor().getUsername().equals(username);
-        boolean isAdminOrManager = securityContext.isUserInRole("ADMINISTRADOR")
-                || securityContext.isUserInRole("RESPONSAVEL");
-
-        if (!isOwner && !isAdminOrManager) {
+        if (!isOwner) {
             return Response.status(Response.Status.FORBIDDEN)
                     .entity(Map.of("message", "Só pode remover os seus próprios comentários"))
                     .build();
@@ -139,7 +136,8 @@ public class CommentService {
             visible = Boolean.parseBoolean(v.toString());
         }
 
-        commentBean.setVisibility(id, visible);
+        String username = securityContext.getUserPrincipal().getName();
+        commentBean.setVisibility(id, visible, username);
         var comment = commentBean.find(id);
 
         var updatedAt = comment.getUpdatedAt() != null

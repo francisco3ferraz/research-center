@@ -29,6 +29,9 @@ public class ConfigBean {
     private TagBean tagBean;
     
     @EJB
+    private ScientificAreaBean scientificAreaBean;
+    
+    @EJB
     private PublicationBean publicationBean;
     
     @EJB
@@ -80,6 +83,22 @@ public class ConfigBean {
             }
             
             // Create Publications
+            // Ensure some scientific areas exist for selects and associations
+            try {
+                scientificAreaBean.create("Ciência de Dados", "Área relacionada com análise de dados e machine learning");
+            } catch (Exception ignored) {}
+            try {
+                scientificAreaBean.create("Ciência dos Materiais", "Estudo de materiais e propriedades quânticas");
+            } catch (Exception ignored) {}
+            try {
+                scientificAreaBean.create("Inteligência Artificial", "Pesquisa em IA, redes neurais e aprendizagem automática");
+            } catch (Exception ignored) {}
+            try {
+                scientificAreaBean.create("Segurança Informática", "Segurança, redes e criptografia");
+            } catch (Exception ignored) {}
+            try {
+                scientificAreaBean.create("Sistemas Distribuídos", "Sistemas, redes e computação distribuída");
+            } catch (Exception ignored) {}
             var pub1 = publicationBean.create(
                 "Machine Learning in Data Science",
                 Arrays.asList("João A", "Maria Santos"),

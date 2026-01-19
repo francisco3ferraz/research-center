@@ -3,29 +3,34 @@ package pt.ipleiria.dei.ei.estg.researchcenter.dtos;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.Rating;
 
 import java.io.Serializable;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.stream.Collectors;
+import jakarta.json.bind.annotation.JsonbProperty;
 
 public class RatingDTO implements Serializable {
 
     private Long id;
-    @jakarta.json.bind.annotation.JsonbProperty("value")
-    private int stars;
-    private String userUsername;
-    private String userName;
     private Long publicationId;
+    private Long userId;
+    private String userName;
+    @JsonbProperty("value")
+    private int value;
+    private OffsetDateTime createdAt;
 
     // Default constructor
     public RatingDTO() {
     }
 
     // Constructor with parameters
-    public RatingDTO(Long id, int stars, String userUsername, String userName, Long publicationId) {
+    public RatingDTO(Long id, Long publicationId, Long userId, String userName, int value, OffsetDateTime createdAt) {
         this.id = id;
-        this.stars = stars;
-        this.userUsername = userUsername;
-        this.userName = userName;
         this.publicationId = publicationId;
+        this.userId = userId;
+        this.userName = userName;
+        this.value = value;
+        this.createdAt = createdAt;
     }
 
     // Getters and Setters
@@ -37,21 +42,8 @@ public class RatingDTO implements Serializable {
         this.id = id;
     }
 
-    public int getStars() {
-        return stars;
-    }
-
-    public void setStars(int stars) {
-        this.stars = stars;
-    }
-
-    public String getUserUsername() {
-        return userUsername;
-    }
-
-    public void setUserUsername(String userUsername) {
-        this.userUsername = userUsername;
-    }
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 
     public String getUserName() {
         return userName;
@@ -60,6 +52,12 @@ public class RatingDTO implements Serializable {
     public void setUserName(String userName) {
         this.userName = userName;
     }
+
+    public int getValue() { return value; }
+    public void setValue(int value) { this.value = value; }
+
+    public OffsetDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
 
     public Long getPublicationId() {
         return publicationId;
@@ -71,12 +69,17 @@ public class RatingDTO implements Serializable {
 
     // Conversion methods
     public static RatingDTO from(Rating rating) {
+        OffsetDateTime createdAt = null;
+        if (rating.getCreatedAt() != null) {
+            createdAt = rating.getCreatedAt().atOffset(ZoneOffset.UTC);
+        }
         return new RatingDTO(
                 rating.getId(),
-                rating.getStars(),
-                rating.getUser().getUsername(),
+                rating.getPublication().getId(),
+                rating.getUser().getId(),
                 rating.getUser().getName(),
-                rating.getPublication().getId()
+                rating.getStars(),
+                createdAt
         );
     }
 

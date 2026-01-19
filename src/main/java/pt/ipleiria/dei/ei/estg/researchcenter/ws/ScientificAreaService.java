@@ -1,6 +1,7 @@
 package pt.ipleiria.dei.ei.estg.researchcenter.ws;
 
 import jakarta.annotation.security.RolesAllowed;
+import jakarta.annotation.security.PermitAll;
 import jakarta.ejb.EJB;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
@@ -20,7 +21,6 @@ import java.util.Map;
 @Path("scientific-areas")
 @Produces({MediaType.APPLICATION_JSON})
 @Consumes({MediaType.APPLICATION_JSON})
-@Authenticated
 public class ScientificAreaService {
 
     @EJB
@@ -31,6 +31,7 @@ public class ScientificAreaService {
      * GET /api/scientific-areas
      */
     @GET
+    @PermitAll
     public Response getAll() {
         var areas = scientificAreaBean.findAll();
         return Response.ok(ScientificAreaDTO.from(areas)).build();
@@ -41,6 +42,7 @@ public class ScientificAreaService {
      * POST /api/scientific-areas
      */
     @POST
+    @Authenticated
     @RolesAllowed({"ADMINISTRADOR"})
     public Response create(String rawBody) 
             throws MyEntityExistsException, MyConstraintViolationException {
@@ -89,6 +91,7 @@ public class ScientificAreaService {
      */
     @PUT
     @Path("/{id}")
+    @Authenticated
     @RolesAllowed({"ADMINISTRADOR"})
     public Response update(@PathParam("id") Long id, String rawBody) 
             throws MyEntityNotFoundException, MyConstraintViolationException, MyEntityExistsException {
@@ -135,6 +138,7 @@ public class ScientificAreaService {
      */
     @DELETE
     @Path("/{id}")
+    @Authenticated
     @RolesAllowed({"ADMINISTRADOR"})
     public Response delete(@PathParam("id") Long id) throws MyEntityNotFoundException {
         scientificAreaBean.delete(id);

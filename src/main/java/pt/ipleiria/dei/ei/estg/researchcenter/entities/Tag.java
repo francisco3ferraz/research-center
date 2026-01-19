@@ -43,7 +43,7 @@ public class Tag implements Serializable {
     @JoinTable(
         name = "tag_subscribers",
         joinColumns = @JoinColumn(name = "tag_id"),
-        inverseJoinColumns = @JoinColumn(name = "user_username")
+        inverseJoinColumns = @JoinColumn(name = "collaborator_id", referencedColumnName = "id")
     )
     private List<Collaborator> subscribers;
     

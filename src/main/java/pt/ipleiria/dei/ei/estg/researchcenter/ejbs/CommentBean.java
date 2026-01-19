@@ -10,6 +10,8 @@ import pt.ipleiria.dei.ei.estg.researchcenter.entities.Comment;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.Tag;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyConstraintViolationException;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
+import pt.ipleiria.dei.ei.estg.researchcenter.entities.User;
+import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.UserBean;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,6 +30,9 @@ public class CommentBean {
     
     @EJB
     private NotificationBean notificationBean;
+
+    @EJB
+    private UserBean userBean;
     
     public Comment create(String text, Long authorId, Long publicationId)
             throws MyEntityNotFoundException, MyConstraintViolationException {
@@ -123,6 +128,20 @@ public class CommentBean {
         var comment = find(id);
         comment.setVisible(visible);
         comment.setUpdatedAt(LocalDateTime.now());
+    }
+
+    public void setVisibility(Long id, boolean visible, String performedByUsername) throws MyEntityNotFoundException {
+        var comment = find(id);
+        comment.setVisible(visible);
+        comment.setUpdatedAt(LocalDateTime.now());
+        if (!visible) {
+            User u = performedByUsername != null ? userBean.findByUsername(performedByUsername) : null;
+            comment.setHiddenBy(u);
+            comment.setHiddenAt(LocalDateTime.now());
+        } else {
+            comment.setHiddenBy(null);
+            comment.setHiddenAt(null);
+        }
     }
     
     public void hide(Long id) throws MyEntityNotFoundException {
