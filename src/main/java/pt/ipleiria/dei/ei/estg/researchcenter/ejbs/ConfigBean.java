@@ -4,8 +4,8 @@ import jakarta.annotation.PostConstruct;
 import jakarta.ejb.EJB;
 import jakarta.ejb.Singleton;
 import jakarta.ejb.Startup;
-import pt.ipleiria.dei.ei.estg.researchcenter.entities.PublicationType;
-
+import pt.ipleiria.dei.ei.estg.researchcenter.entities.*;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
@@ -48,23 +48,22 @@ public class ConfigBean {
     
     @PostConstruct
     public void populateDB() {
-        System.out.println("Hello Publications Platform! Starting Massive Seeding...");
         logger.info("Database population started...");
         
         try {
             // 1. Create Users
             // Helper to safe create
-            pt.ipleiria.dei.ei.estg.researchcenter.entities.Administrator admin = null;
+            Administrator admin = null;
             try { admin = administratorBean.create("admin", "admin", "Administrator", "admin@research.pt"); } catch (Exception e) { 
-                 try { admin = (pt.ipleiria.dei.ei.estg.researchcenter.entities.Administrator) userBean.findByUsername("admin"); } catch(Exception ex) {} 
+                 try { admin = (Administrator) userBean.findByUsername("admin"); } catch(Exception ex) {} 
             }
             
-            pt.ipleiria.dei.ei.estg.researchcenter.entities.Manager responsavel = null;
+            Manager responsavel = null;
             try { responsavel = managerBean.create("responsavel", "123", "Responsável T.", "resp@research.pt"); } catch (Exception e) {
-                 try { responsavel = (pt.ipleiria.dei.ei.estg.researchcenter.entities.Manager) userBean.findByUsername("responsavel"); } catch(Exception ex) {}
+                 try { responsavel = (Manager) userBean.findByUsername("responsavel"); } catch(Exception ex) {}
             }
 
-            var collaborators = new java.util.ArrayList<pt.ipleiria.dei.ei.estg.researchcenter.entities.Collaborator>();
+            List<Collaborator> collaborators = new ArrayList<>();
             for (int i = 1; i <= 10; i++) {
                 try {
                     collaborators.add(collaboratorBean.create("user" + i, "123", "Collaborator " + i, "user" + i + "@research.pt"));
@@ -80,7 +79,7 @@ public class ConfigBean {
             }
             
             // 3. Create Tags
-            var allTags = new java.util.ArrayList<pt.ipleiria.dei.ei.estg.researchcenter.entities.Tag>();
+            List<Tag> allTags = new ArrayList<>();
             for (int i = 1; i <= 20; i++) {
                 try {
                     allTags.add(tagBean.create("Tag " + i, "Description for Tag " + i));
@@ -91,7 +90,7 @@ public class ConfigBean {
 
             // 4. Create Publications (Massive Loop)
             java.util.Random rand = new java.util.Random();
-            var types = PublicationType.values();
+            PublicationType[] types = PublicationType.values();
             
             if (collaborators.isEmpty()) { 
                 logger.warning("No collaborators found, skipping publication seeding.");
@@ -101,15 +100,15 @@ public class ConfigBean {
             logger.info("Seeding 50 publications...");
             for (int i = 1; i <= 50; i++) {
                 try {
-                    var uploader = collaborators.get(rand.nextInt(collaborators.size()));
-                    var type = types[rand.nextInt(types.length)];
-                    var area = areaNames[rand.nextInt(areaNames.length)];
+                    Collaborator uploader = collaborators.get(rand.nextInt(collaborators.size()));
+                    PublicationType type = types[rand.nextInt(types.length)];
+                    String area = areaNames[rand.nextInt(areaNames.length)];
                     int year = 2015 + rand.nextInt(11); // 2015-2025
                     
                     String title = "Publication " + i + ": " + generateRandomTitle(rand);
                     String summary = "This is a generated summary for publication " + i + ". It explores " + area + " in the context of " + type.getName() + "...";
                     
-                    var pub = publicationBean.create(
+                    Publication pub = publicationBean.create(
                         title,
                         Arrays.asList(uploader.getName(), "Co-Author A", "Co-Author B"),
                         type,
@@ -148,7 +147,7 @@ public class ConfigBean {
                     // Add Comments (0-20)
                     int numComments = rand.nextInt(21);
                     for (int c = 0; c < numComments; c++) {
-                        var author = collaborators.get(rand.nextInt(collaborators.size()));
+                        Collaborator author = collaborators.get(rand.nextInt(collaborators.size()));
                         try {
                             commentBean.create("Comment " + c + " on " + title + ". Interesting work!", author.getId(), pub.getId());
                             activityLogBean.create(author, "COMMENT", "PUBLICATION", pub.getId(), "Comentou na publicação '" + title + "'");
@@ -158,7 +157,7 @@ public class ConfigBean {
                     // Add Ratings (0-25)
                     int numRatings = rand.nextInt(26);
                     for (int r = 0; r < numRatings; r++) {
-                        var author = collaborators.get(rand.nextInt(collaborators.size()));
+                        Collaborator author = collaborators.get(rand.nextInt(collaborators.size()));
                         try {
                             ratingBean.create(1 + rand.nextInt(5), author.getId(), pub.getId());
                             activityLogBean.create(author, "RATE", "PUBLICATION", pub.getId(), "Avaliou a publicação '" + title + "'");

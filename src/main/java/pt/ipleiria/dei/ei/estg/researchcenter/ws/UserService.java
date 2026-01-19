@@ -7,17 +7,13 @@ import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
-import pt.ipleiria.dei.ei.estg.researchcenter.dtos.ActivityLogDTO;
-import pt.ipleiria.dei.ei.estg.researchcenter.dtos.UserDTO;
-import pt.ipleiria.dei.ei.estg.researchcenter.dtos.UserSummaryDTO;
+import pt.ipleiria.dei.ei.estg.researchcenter.dtos.*;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.ActivityLogBean;
 import pt.ipleiria.dei.ei.estg.researchcenter.ejbs.UserBean;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.UserRole;
-import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyConstraintViolationException;
-import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityExistsException;
-import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
+import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.*;
 import pt.ipleiria.dei.ei.estg.researchcenter.security.Authenticated;
 
 import java.util.Map;
@@ -40,22 +36,25 @@ public class UserService {
     @GET
     @RolesAllowed({"ADMINISTRADOR"})
     public Response getAll() {
-        var users = userBean.findAll();
+        List<User> users = userBean.findAll();
         return Response.ok(UserDTO.from(users)).build();
     }
 
     @GET
     @Path("/lookup")
     public Response lookup(@QueryParam("q") String q) {
-        var users = userBean.searchByName(q);
-        var dtos = users.stream().map(UserSummaryDTO::from).collect(Collectors.toList());
+        List<User> users = userBean.searchByName(q);
+        List<UserSummaryDTO> dtos = new ArrayList<>();
+        for (User user : users) {
+            dtos.add(UserSummaryDTO.from(user));
+        }
         return Response.ok(dtos).build();
     }
 
     @GET
     @Path("/{id}")
     public Response get(@PathParam("id") Long id) throws MyEntityNotFoundException {
-        var user = userBean.find(id);
+        User user = userBean.find(id);
         return Response.ok(UserDTO.from(user)).build();
     }
 
@@ -75,7 +74,7 @@ public class UserService {
             }
         }
 
-        var user = userBean.create(
+        User user = userBean.create(
                 dto.getUsername(),
                 dto.getPassword(),
                 dto.getName(),
@@ -106,7 +105,7 @@ public class UserService {
             }
         }
 
-        var user = userBean.update(id, dto.getName(), dto.getEmail(), role);
+        User user = userBean.update(id, dto.getName(), dto.getEmail(), role);
         return Response.ok(UserDTO.from(user)).build();
     }
 
@@ -114,7 +113,7 @@ public class UserService {
     @Path("/{id}/status")
     @RolesAllowed({"ADMINISTRADOR"})
     public Response setStatus(@PathParam("id") Long id, UserDTO dto) throws MyEntityNotFoundException {
-        var user = userBean.setActive(id, dto.isActive());
+        User user = userBean.setActive(id, dto.isActive());
         return Response.ok(UserDTO.from(user)).build();
     }
 
@@ -132,7 +131,7 @@ public class UserService {
         // Get the authenticated user's username
         String username = securityContext.getUserPrincipal().getName();
 
-        var user = userBean.updateProfile(username, dto.getName(), dto.getEmail());
+        User user = userBean.updateProfile(username, dto.getName(), dto.getEmail());
         return Response.ok(UserDTO.from(user)).build();
     }
 
@@ -143,7 +142,7 @@ public class UserService {
                                 @QueryParam("size") @DefaultValue("20") int size) throws MyEntityNotFoundException {
         // Check if user is viewing their own activity or is an admin
         String username = securityContext.getUserPrincipal().getName();
-        var currentUser = userBean.findByUsernameOrThrow(username);
+        User currentUser = userBean.findByUsernameOrThrow(username);
 
         // Only allow viewing own activity or if admin
         if (!currentUser.getId().equals(id) &&
@@ -153,7 +152,7 @@ public class UserService {
                     .build();
         }
 
-        var activities = activityLogBean.getUserActivityLogPaginated(id, page, size);
+        List<ActivityLog> activities = activityLogBean.getUserActivityLogPaginated(id, page, size);
         return Response.ok(ActivityLogDTO.from(activities)).build();
     }
 }

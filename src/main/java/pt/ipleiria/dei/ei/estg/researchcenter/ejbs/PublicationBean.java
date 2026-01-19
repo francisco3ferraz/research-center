@@ -4,11 +4,10 @@ import jakarta.ejb.EJB;
 import jakarta.ejb.Stateless;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
 import jakarta.validation.ConstraintViolationException;
 import org.hibernate.Hibernate;
-import pt.ipleiria.dei.ei.estg.researchcenter.entities.Publication;
-import pt.ipleiria.dei.ei.estg.researchcenter.entities.PublicationType;
-import pt.ipleiria.dei.ei.estg.researchcenter.entities.User;
+import pt.ipleiria.dei.ei.estg.researchcenter.entities.*;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyConstraintViolationException;
 import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
 import pt.ipleiria.dei.ei.estg.researchcenter.dtos.PublicationDTO;
@@ -38,10 +37,10 @@ public class PublicationBean {
                              String areaScientific, Integer year, String abstract_,
                              Long uploadedById)
             throws MyEntityNotFoundException, MyConstraintViolationException {
-        var uploadedBy = uploadedById != null ? collaboratorBean.find(uploadedById) : null;
+        Collaborator uploadedBy = uploadedById != null ? collaboratorBean.find(uploadedById) : null;
 
         try {
-            var publication = new Publication(title, authors, type, areaScientific, year, abstract_, uploadedBy);
+            Publication publication = new Publication(title, authors, type, areaScientific, year, abstract_, uploadedBy);
             em.persist(publication);
             em.flush();
 
@@ -56,18 +55,18 @@ public class PublicationBean {
     }
 
     public PublicationDTO getDTOWithDetails(Long id) throws MyEntityNotFoundException {
-        var publication = findWithDetails(id);
+        Publication publication = findWithDetails(id);
         return PublicationDTO.fromWithDetails(publication);
     }
 
     public void incrementViews(Long id) throws MyEntityNotFoundException {
-        var publication = find(id);
+        Publication publication = find(id);
         publication.incrementViews();
         em.flush();
     }
     
     public Publication find(Long id) throws MyEntityNotFoundException {
-        var publication = em.find(Publication.class, id);
+        Publication publication = em.find(Publication.class, id);
         if (publication == null) {
             throw new MyEntityNotFoundException("Publication with id " + id + " not found");
         }
@@ -75,7 +74,7 @@ public class PublicationBean {
     }
     
     public Publication findWithDetails(Long id) throws MyEntityNotFoundException {
-        var publication = find(id);
+        Publication publication = find(id);
         // Force loading of lazy collections
         Hibernate.initialize(publication.getTags());
         Hibernate.initialize(publication.getComments());
@@ -95,8 +94,8 @@ public class PublicationBean {
     }
     
     public List<Publication> findByUploadedBy(Long userId) throws MyEntityNotFoundException {
-        var uploader = collaboratorBean.find(userId);
-        var list = em.createQuery(
+        Collaborator uploader = collaboratorBean.find(userId);
+        List<Publication> list = em.createQuery(
             "SELECT p FROM Publication p WHERE p.uploadedBy = :uploader ORDER BY p.uploadedAt DESC", 
             Publication.class)
             .setParameter("uploader", uploader)
@@ -112,7 +111,7 @@ public class PublicationBean {
     }
     
     public List<Publication> findByAreaScientific(String areaScientific) {
-        var list = em.createQuery(
+        List<Publication> list = em.createQuery(
             "SELECT p FROM Publication p WHERE p.areaScientific = :area AND p.visible = true ORDER BY p.uploadedAt DESC", 
             Publication.class)
             .setParameter("area", areaScientific)
@@ -140,7 +139,7 @@ public class PublicationBean {
         if (dateTo != null) sb.append(" AND p.uploadedAt <= :dateTo ");
         sb.append(" ORDER BY p.uploadedAt DESC");
 
-        var q = em.createQuery(sb.toString(), Publication.class);
+        TypedQuery<Publication> q = em.createQuery(sb.toString(), Publication.class);
         if (areaScientific != null && !areaScientific.isBlank()) q.setParameter("area", areaScientific);
         if (search != null && !search.isBlank()) q.setParameter("search", "%" + search.toLowerCase() + "%");
         if (tagId != null) q.setParameter("tagId", tagId);
@@ -150,7 +149,7 @@ public class PublicationBean {
             q.setFirstResult(page * size);
             q.setMaxResults(size);
         }
-        var list = q.getResultList();
+        List<Publication> list = q.getResultList();
         // Ensure lazy collections are initialized to avoid lazy-init outside transaction
         for (Publication p : list) {
             try {
@@ -211,7 +210,7 @@ public class PublicationBean {
         orderClause += asc ? "ASC" : "DESC";
         sb.append(orderClause);
 
-        var q = em.createQuery(sb.toString(), Publication.class);
+        TypedQuery<Publication> q = em.createQuery(sb.toString(), Publication.class);
         if (areaScientific != null && !areaScientific.isBlank()) q.setParameter("area", areaScientific);
         if (search != null && !search.isBlank()) q.setParameter("search", "%" + search.toLowerCase() + "%");
         if (tagId != null) q.setParameter("tagId", tagId);
@@ -221,7 +220,7 @@ public class PublicationBean {
             q.setFirstResult(page * size);
             q.setMaxResults(size);
         }
-        var list = q.getResultList();
+        List<Publication> list = q.getResultList();
         for (Publication p : list) {
             try {
                 Hibernate.initialize(p.getTags());
@@ -275,7 +274,7 @@ public class PublicationBean {
         orderClause += asc ? "ASC" : "DESC";
         sb.append(orderClause);
 
-        var q = em.createQuery(sb.toString(), Publication.class);
+        TypedQuery<Publication> q = em.createQuery(sb.toString(), Publication.class);
         if (areaScientific != null && !areaScientific.isBlank()) q.setParameter("area", areaScientific);
         if (search != null && !search.isBlank()) q.setParameter("search", "%" + search.toLowerCase() + "%");
         if (tagId != null) q.setParameter("tagId", tagId);
@@ -285,7 +284,7 @@ public class PublicationBean {
             q.setFirstResult(page * size);
             q.setMaxResults(size);
         }
-        var list = q.getResultList();
+        List<Publication> list = q.getResultList();
         for (Publication p : list) {
             try {
                 Hibernate.initialize(p.getTags());
@@ -310,7 +309,7 @@ public class PublicationBean {
         if (dateFrom != null) sb.append(" AND p.uploadedAt >= :dateFrom ");
         if (dateTo != null) sb.append(" AND p.uploadedAt <= :dateTo ");
 
-        var q = em.createQuery(sb.toString(), Long.class);
+        TypedQuery<Long> q = em.createQuery(sb.toString(), Long.class);
         if (areaScientific != null && !areaScientific.isBlank()) q.setParameter("area", areaScientific);
         if (search != null && !search.isBlank()) q.setParameter("search", "%" + search.toLowerCase() + "%");
         if (tagId != null) q.setParameter("tagId", tagId);
@@ -404,7 +403,7 @@ public class PublicationBean {
         orderClause += asc ? "ASC" : "DESC";
         sb.append(orderClause);
 
-        var q = em.createQuery(sb.toString(), Publication.class);
+        TypedQuery<Publication> q = em.createQuery(sb.toString(), Publication.class);
         if (confidential != null) q.setParameter("confidential", confidential);
         if (yearFrom != null) q.setParameter("yearFrom", yearFrom);
         if (yearTo != null) q.setParameter("yearTo", yearTo);
@@ -429,7 +428,7 @@ public class PublicationBean {
             q.setMaxResults(size);
         }
 
-        var list = q.getResultList();
+        List<Publication> list = q.getResultList();
         for (Publication p : list) {
             try {
                 Hibernate.initialize(p.getTags());
@@ -493,7 +492,7 @@ public class PublicationBean {
             else sb.append(" AND (SELECT COUNT(c) FROM Comment c WHERE c.publication = p AND c.visible = true) = 0 ");
         }
 
-        var q = em.createQuery(sb.toString(), Long.class);
+        TypedQuery<Long> q = em.createQuery(sb.toString(), Long.class);
         if (confidential != null) q.setParameter("confidential", confidential);
         if (yearFrom != null) q.setParameter("yearFrom", yearFrom);
         if (yearTo != null) q.setParameter("yearTo", yearTo);
@@ -517,7 +516,7 @@ public class PublicationBean {
     }
 
     public List<Publication> findAllHidden() {
-        var list = em.createQuery("SELECT p FROM Publication p WHERE p.visible = false ORDER BY p.uploadedAt DESC", Publication.class)
+        List<Publication> list = em.createQuery("SELECT p FROM Publication p WHERE p.visible = false ORDER BY p.uploadedAt DESC", Publication.class)
                 .getResultList();
         for (Publication p : list) {
             try {
@@ -547,7 +546,7 @@ public class PublicationBean {
         if (dateFrom != null) sb.append(" AND p.uploadedAt >= :dateFrom ");
         if (dateTo != null) sb.append(" AND p.uploadedAt <= :dateTo ");
 
-        var q = em.createQuery(sb.toString(), Long.class);
+        TypedQuery<Long> q = em.createQuery(sb.toString(), Long.class);
         if (areaScientific != null && !areaScientific.isBlank()) q.setParameter("area", areaScientific);
         if (search != null && !search.isBlank()) q.setParameter("search", "%" + search.toLowerCase() + "%");
         if (tagId != null) q.setParameter("tagId", tagId);
@@ -557,8 +556,8 @@ public class PublicationBean {
     }
     
     public List<Publication> findByTag(Long tagId) throws MyEntityNotFoundException {
-        var tag = tagBean.find(tagId);
-        var list = em.createQuery(
+        Tag tag = tagBean.find(tagId);
+        List<Publication> list = em.createQuery(
             "SELECT p FROM Publication p JOIN p.tags t WHERE t = :tag AND p.visible = true ORDER BY p.uploadedAt DESC",
             Publication.class)
             .setParameter("tag", tag)
@@ -574,7 +573,7 @@ public class PublicationBean {
     }
     
     public List<Publication> findByType(PublicationType type) {
-        var list = em.createQuery(
+        List<Publication> list = em.createQuery(
             "SELECT p FROM Publication p WHERE p.type = :type AND p.visible = true ORDER BY p.uploadedAt DESC",
             Publication.class)
             .setParameter("type", type)
@@ -592,7 +591,7 @@ public class PublicationBean {
     public void update(Long id, String title, List<String> authors, String abstract_, 
                       String aiGeneratedSummary, Integer year, String publisher, String doi)
             throws MyEntityNotFoundException, MyConstraintViolationException {
-        var publication = find(id);
+        Publication publication = find(id);
         
         try {
             em.lock(publication, jakarta.persistence.LockModeType.OPTIMISTIC);
@@ -613,13 +612,13 @@ public class PublicationBean {
     }
     
     public void delete(Long id) throws MyEntityNotFoundException {
-        var publication = find(id);
+        Publication publication = find(id);
         em.remove(publication);
     }
     
     public void addTag(Long publicationId, Long tagId) throws MyEntityNotFoundException {
-        var publication = find(publicationId);
-        var tag = tagBean.find(tagId);
+        Publication publication = find(publicationId);
+        Tag tag = tagBean.find(tagId);
         
         publication.addTag(tag);
         tag.addPublication(publication);
@@ -639,21 +638,21 @@ public class PublicationBean {
     }
     
     public void removeTag(Long publicationId, Long tagId) throws MyEntityNotFoundException {
-        var publication = find(publicationId);
-        var tag = tagBean.find(tagId);
+        Publication publication = find(publicationId);
+        Tag tag = tagBean.find(tagId);
         
         publication.removeTag(tag);
         tag.removePublication(publication);
     }
     
     public void setVisibility(Long id, boolean visible) throws MyEntityNotFoundException {
-        var publication = find(id);
+        Publication publication = find(id);
         publication.setVisible(visible);
         publication.setUpdatedAt(LocalDateTime.now());
     }
 
     public void setVisibility(Long id, boolean visible, String performedByUsername) throws MyEntityNotFoundException {
-        var publication = find(id);
+        Publication publication = find(id);
         publication.setVisible(visible);
         publication.setUpdatedAt(LocalDateTime.now());
         if (!visible) {

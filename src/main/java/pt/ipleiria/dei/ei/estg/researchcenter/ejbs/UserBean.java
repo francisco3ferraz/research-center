@@ -5,9 +5,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.validation.ConstraintViolationException;
 import pt.ipleiria.dei.ei.estg.researchcenter.entities.*;
-import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyConstraintViolationException;
-import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityExistsException;
-import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.MyEntityNotFoundException;
+import pt.ipleiria.dei.ei.estg.researchcenter.exceptions.*;
 import pt.ipleiria.dei.ei.estg.researchcenter.security.Hasher;
 
 import java.time.LocalDateTime;
@@ -20,7 +18,7 @@ public class UserBean {
     private EntityManager em;
 
     public User find(Long id) throws MyEntityNotFoundException {
-        var user = em.find(User.class, id);
+        User user = em.find(User.class, id);
         if (user == null) {
             throw new MyEntityNotFoundException("User with id " + id + " not found");
         }
@@ -28,7 +26,7 @@ public class UserBean {
     }
     
     public User findByUsername(String username) {
-        var users = em.createQuery("SELECT u FROM User u WHERE u.username = :username", User.class)
+        List<User> users = em.createQuery("SELECT u FROM User u WHERE u.username = :username", User.class)
                       .setParameter("username", username)
                       .getResultList();
         
@@ -36,7 +34,7 @@ public class UserBean {
     }
 
     public User findByUsernameOrThrow(String username) throws MyEntityNotFoundException {
-        var user = findByUsername(username);
+        User user = findByUsername(username);
         if (user == null) {
             throw new MyEntityNotFoundException("User '" + username + "' not found");
         }
@@ -106,7 +104,7 @@ public class UserBean {
     public User update(Long id, String name, String email, UserRole newRole)
             throws MyEntityNotFoundException, MyConstraintViolationException {
 
-        var user = find(id);
+        User user = find(id);
 
         try {
             em.lock(user, jakarta.persistence.LockModeType.OPTIMISTIC);
@@ -133,7 +131,7 @@ public class UserBean {
     public User updateProfile(String username, String name, String email)
             throws MyEntityNotFoundException, MyConstraintViolationException {
 
-        var user = findByUsernameOrThrow(username);
+        User user = findByUsernameOrThrow(username);
 
         try {
             em.lock(user, jakarta.persistence.LockModeType.OPTIMISTIC);
@@ -151,7 +149,7 @@ public class UserBean {
      * EP05 - Ativar/Desativar Utilizador
      */
     public User setActive(Long id, boolean active) throws MyEntityNotFoundException {
-        var user = find(id);
+        User user = find(id);
         user.setActive(active);
         em.flush();
         return user;
@@ -162,7 +160,7 @@ public class UserBean {
      * EP06 - Remover Utilizador
      */
     public void delete(Long id) throws MyEntityNotFoundException {
-        var user = find(id);
+        User user = find(id);
         
         // Manual Cascade Delete/Unlink to avoid Constraint Violation
         
@@ -212,14 +210,14 @@ public class UserBean {
      * Updates last login timestamp.
      */
     public void updateLastLogin(String username) {
-        var user = findByUsername(username);
+        User user = findByUsername(username);
         if (user != null) {
             user.setLastLogin(LocalDateTime.now());
         }
     }
 
     public boolean changePassword(String username, String oldPassword, String newPassword) {
-        var user = findByUsername(username);
+        User user = findByUsername(username);
         if (user == null) return false;
 
         // Verify old password using Hasher
@@ -238,7 +236,7 @@ public class UserBean {
      * Used by AuthorizationFilter for @RequirePermission and @RequireAction annotations.
      */
     public boolean userHasPermission(String username, String permission) {
-        var user = findByUsername(username);
+        User user = findByUsername(username);
         if (user == null) return false;
 
         // Simple permission model:
