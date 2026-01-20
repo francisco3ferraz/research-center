@@ -30,41 +30,111 @@
     </div>
 
     <div class="bg-white shadow rounded-lg p-4">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4 items-end">
-        <input
-          v-model="search"
-          placeholder="Search title, author or tag..."
-          class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-200"
-        />
+      <div class="bg-slate-50 border rounded-lg p-4 mb-6">
+        <h3 class="text-sm font-semibold text-slate-700 mb-3">Filters</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Text Search -->
+          <div class="col-span-1 md:col-span-2 lg:col-span-1">
+            <label class="block text-xs text-slate-500 mb-1">Search</label>
+            <input
+              v-model="search"
+              placeholder="Title, author or tag..."
+              class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
 
-        <select
-          v-model="sortBy"
-          @change="fetchPubs"
-          class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-200"
-        >
-          <option value="">Sort by...</option>
-          <option value="comments">Comments Count</option>
-          <option value="rating">Average Rating</option>
-          <option value="ratings_count">Ratings Count</option>
-          <option value="views">Views Count</option>
-          <option value="date">Upload Date</option>
-        </select>
+          <!-- Scientific Area -->
+          <div>
+             <label class="block text-xs text-slate-500 mb-1">Scientific Area</label>
+             <select
+              v-model="selectedArea"
+              class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            >
+              <option value="">All Areas</option>
+              <option v-for="area in scientificAreas" :key="area.id" :value="area.name">
+                {{ area.name }}
+              </option>
+            </select>
+          </div>
 
-        <div v-if="auth.token.value && (auth.user.value?.role === 'ADMINISTRADOR' || auth.user.value?.role === 'RESPONSAVEL')" class="flex items-center gap-2 h-full pb-2">
-            <input type="checkbox" v-model="showHidden" id="showHidden" class="w-4 h-4 text-blue-600 rounded">
-            <label for="showHidden" class="text-sm select-none cursor-pointer">Show Hidden</label>
-        </div>
+          <!-- Tag -->
+          <div>
+             <label class="block text-xs text-slate-500 mb-1">Tag</label>
+            <select
+              v-model="selectedTag"
+              class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            >
+              <option value="">All Tags</option>
+              <option v-for="tag in availableTags" :key="tag.id" :value="tag.id">
+                {{ tag.name }}
+              </option>
+            </select>
+          </div>
 
-        <div class="flex gap-2 w-full">
-          <button
-            @click="fetchPubs"
-            class="flex-1 bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700"
-          >
-            Search
-          </button>
-          <button @click="clearFilters" class="px-4 py-2 border rounded hover:bg-gray-50">
-            Clear
-          </button>
+          <!-- Sort -->
+          <div>
+            <label class="block text-xs text-slate-500 mb-1">Sort By</label>
+            <select
+              v-model="sortBy"
+              class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            >
+              <option value="">Default (Newest)</option>
+              <option value="comments">Most Comments</option>
+              <option value="rating">Highest Rating</option>
+              <option value="ratings_count">Most Ratings</option>
+              <option value="views">Most Views</option>
+              <option value="date">Upload Date</option>
+            </select>
+          </div>
+
+          <!-- Date From -->
+           <div>
+            <label class="block text-xs text-slate-500 mb-1">From Date</label>
+            <input
+              type="date"
+              v-model="dateFrom"
+              class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+
+          <!-- Date To -->
+           <div>
+            <label class="block text-xs text-slate-500 mb-1">To Date</label>
+            <input
+              type="date"
+              v-model="dateTo"
+              class="w-full border rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            />
+          </div>
+
+          <!-- Checkbox -->
+           <div class="flex items-end pb-2">
+            <div v-if="auth.token.value && (auth.user.value?.role === 'ADMINISTRADOR' || auth.user.value?.role === 'RESPONSAVEL')" class="flex items-center gap-2">
+                <input type="checkbox" v-model="showHidden" id="showHidden" class="w-4 h-4 text-blue-600 rounded">
+                <label for="showHidden" class="text-sm select-none cursor-pointer text-slate-700">Show Hidden</label>
+            </div>
+          </div>
+
+          <!-- Buttons -->
+          <div class="flex gap-2 items-end">
+            <button
+              @click="fetchPubs"
+              class="flex-1 bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition-colors"
+            >
+              Search
+            </button>
+            <button @click="clearFilters" class="px-3 py-2 border rounded hover:bg-gray-50 text-slate-600 transition-colors" title="Clear Filters">
+               ✕
+            </button>
+            <button 
+              v-if="auth.token.value" 
+              @click="exportCsv" 
+              class="px-3 py-2 border border-green-600 text-green-600 rounded hover:bg-green-50 flex items-center justify-center transition-colors"
+              title="Export to CSV"
+            >
+              📥
+            </button>
+          </div>
         </div>
       </div>
 
@@ -142,11 +212,36 @@ const size = ref(10);
 const totalPages = ref(1);
 const showHidden = ref(false);
 
+// Advanced filters
+const scientificAreas = ref([]);
+const availableTags = ref([]);
+const selectedArea = ref("");
+const selectedTag = ref("");
+const dateFrom = ref("");
+const dateTo = ref("");
+
+const fetchAuxData = async () => {
+  try {
+    const [areasResp, tagsResp] = await Promise.all([
+      api.get("/scientific-areas"),
+      api.get("/tags"),
+    ]);
+    scientificAreas.value = areasResp.data || [];
+    availableTags.value = (tagsResp.data || []).filter((t) => t.visible);
+  } catch (e) {
+    console.warn("Failed to fetch auxiliary data for filters", e);
+  }
+};
+
 const fetchPubs = async () => {
   loading.value = true;
   try {
     const params = {
       search: search.value,
+      areaScientific: selectedArea.value || undefined,
+      tag: selectedTag.value || undefined,
+      dateFrom: dateFrom.value ? new Date(dateFrom.value).toISOString() : undefined,
+      dateTo: dateTo.value ? new Date(dateTo.value).toISOString() : undefined,
       page: page.value,
       size: size.value,
       sortBy: sortBy.value || undefined,
@@ -164,8 +259,42 @@ const fetchPubs = async () => {
   }
 };
 
+const exportCsv = async () => {
+  if (!auth.token.value) return navigateTo('/auth/login');
+  try {
+     const params = {
+      search: search.value,
+      areaScientific: selectedArea.value || undefined,
+      tag: selectedTag.value || undefined,
+      dateFrom: dateFrom.value ? new Date(dateFrom.value).toISOString() : undefined,
+      dateTo: dateTo.value ? new Date(dateTo.value).toISOString() : undefined,
+      sortBy: sortBy.value || undefined,
+      order: order.value,
+      showHidden: showHidden.value,
+      format: 'csv'
+    };
+    const resp = await api.get("/publications/export", { params, responseType: 'blob' });
+    const blob = new Blob([resp.data], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'publications.csv';
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch(e) {
+    console.error("Export failed", e);
+    alert("Failed to export publications.");
+  }
+};
+
 const clearFilters = () => {
   search.value = "";
+  selectedArea.value = "";
+  selectedTag.value = "";
+  dateFrom.value = "";
+  dateTo.value = "";
   sortBy.value = "";
   order.value = "desc";
   showHidden.value = false;
@@ -186,5 +315,8 @@ const nextPage = () => {
   }
 };
 
-onMounted(() => fetchPubs());
+onMounted(() => {
+  fetchAuxData();
+  fetchPubs();
+});
 </script>
