@@ -22,7 +22,7 @@
           </button>
         </div>
         
-        <div v-if="message" class="text-green-600 text-sm text-center bg-green-50 p-2 rounded">
+        <div v-if="message" class="text-sm text-center p-3 rounded" :class="success ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'">
             {{ message }}
         </div>
       </form>
@@ -35,19 +35,32 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+const config = useRuntimeConfig()
 
 const email = ref('')
 const loading = ref(false)
 const message = ref('')
+const success = ref(false)
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
     loading.value = true
-    // Simulating backend call
-    setTimeout(() => {
-        loading.value = false
-        message.value = 'Funcionalidade será implementada brevemente. (Se o email existisse, receberia instruções).'
+    message.value = ''
+    success.value = false
+    
+    try {
+        await $fetch(`${config.public.apiBase}/auth/request-reset`, {
+            method: 'POST',
+            body: { email: email.value }
+        })
+        
+        success.value = true
+        message.value = 'Se o email existir no sistema, receberá instruções para redefinir a password.'
         email.value = ''
-    }, 1000)
+    } catch (e) {
+        console.error(e)
+        message.value = 'Ocorreu um erro. Tente novamente.'
+    } finally {
+        loading.value = false
+    }
 }
 </script>

@@ -24,6 +24,21 @@
                 Minhas Publicações
               </NuxtLink>
 
+              <NuxtLink
+                v-if="auth.token.value"
+                to="/subscriptions"
+                class="border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                Subscrições
+              </NuxtLink>
+
+              <NuxtLink
+                v-if="auth.token.value"
+                to="/notifications"
+                class="border-transparent text-gray-500 hover:border-blue-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+              >
+                🔔 Notificações
+              </NuxtLink>
 
             </div>
           </div>
@@ -66,6 +81,10 @@
                       to="/scientific-areas"
                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >Gerir Áreas Científicas</NuxtLink>
+                    <NuxtLink
+                      to="/admin/hidden"
+                      class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >Conteúdo Oculto</NuxtLink>
                   </div>
                 </div>
               </div>

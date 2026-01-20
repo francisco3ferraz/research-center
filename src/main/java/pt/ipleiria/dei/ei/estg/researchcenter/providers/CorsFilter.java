@@ -16,14 +16,19 @@ public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilt
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
+        String origin = requestContext.getHeaderString("Origin");
+        if (origin == null) {
+            origin = "*";
+        }
+
         // Handle OPTIONS requests immediately before endpoint matching
         if ("OPTIONS".equalsIgnoreCase(requestContext.getMethod())) {
             requestContext.abortWith(
                 Response.ok()
-                    .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Origin", origin)
                     .header("Access-Control-Allow-Credentials", "true")
-                    .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS")
-                    .header("Access-Control-Allow-Headers", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD")
+                    .header("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, Accept, Origin, If-None-Match, Cache-Control, If-Modified-Since")
                     .header("Access-Control-Max-Age", "3600")
                     .build()
             );
@@ -33,13 +38,17 @@ public class CorsFilter implements ContainerRequestFilter, ContainerResponseFilt
     @Override
     public void filter(ContainerRequestContext requestContext,
                        ContainerResponseContext responseContext) throws IOException {
+        String origin = requestContext.getHeaderString("Origin");
+        if (origin == null) {
+            origin = "*";
+        }
+
         // Add CORS headers to all non-OPTIONS responses
-        // OPTIONS requests are already handled in the request filter
         if (!"OPTIONS".equalsIgnoreCase(requestContext.getMethod())) {
-            responseContext.getHeaders().add("Access-Control-Allow-Origin", "*");
+            responseContext.getHeaders().add("Access-Control-Allow-Origin", origin);
             responseContext.getHeaders().add("Access-Control-Allow-Credentials", "true");
-            responseContext.getHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
-            responseContext.getHeaders().add("Access-Control-Allow-Headers", "*");
+            responseContext.getHeaders().add("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS, HEAD");
+            responseContext.getHeaders().add("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Requested-With, Accept, Origin, If-None-Match, Cache-Control, If-Modified-Since");
         }
     }
 }

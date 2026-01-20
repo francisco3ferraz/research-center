@@ -80,6 +80,11 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+
+definePageMeta({
+  middleware: 'auth'
+})
+
 const api = useApi()
 const auth = useAuth()
 
