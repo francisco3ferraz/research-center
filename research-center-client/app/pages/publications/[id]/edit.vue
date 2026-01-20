@@ -91,18 +91,50 @@
             </label>
 
             <label class="block">
-              <div class="text-sm font-medium text-slate-600 mb-1">
-                Resumo Gerado por IA
-                <span class="text-xs text-slate-400"
-                  >(opcional - pode editar/corrigir)</span
+              <div class="text-sm font-medium text-slate-600 mb-1 flex items-center justify-between">
+                <div>
+                  Resumo Gerado por IA
+                  <span class="text-xs text-slate-400"
+                    >(opcional - pode editar/corrigir)</span
+                  >
+                </div>
+                <button
+                  @click="generateAISummary"
+                  :disabled="isGeneratingSummary || !form.title || !form.abstract"
+                  class="bg-blue-600 disabled:opacity-50 text-white px-3 py-1 rounded text-sm flex items-center gap-2 hover:bg-blue-700"
+                  type="button"
                 >
+                  <svg
+                    v-if="isGeneratingSummary"
+                    class="animate-spin h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      class="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      stroke-width="4"
+                    ></circle>
+                    <path
+                      class="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8v8H4z"
+                    ></path>
+                  </svg>
+                  <span>{{ isGeneratingSummary ? "A gerar..." : "Gerar Resumo com IA" }}</span>
+                </button>
               </div>
               <textarea
                 v-model="form.aiGeneratedSummary"
                 placeholder="Resumo gerado automaticamente por IA"
                 class="w-full border rounded px-3 py-2 bg-blue-50 focus:ring-2 focus:ring-blue-200"
-                rows="5"
+                :rows="form.aiGeneratedSummary && form.aiGeneratedSummary.length > 200 ? 8 : 5"
               ></textarea>
+              <div v-if="aiError" class="text-red-600 text-sm mt-1">{{ aiError }}</div>
             </label>
 
             <div class="flex items-center gap-3 text-sm text-slate-500">
@@ -238,6 +270,8 @@ const pub = ref({});
 const loading = ref(true);
 const saving = ref(false);
 const error = ref(null);
+const isGeneratingSummary = ref(false);
+const aiError = ref(null);
 const form = ref({
   title: "",
   authors: [],
@@ -263,9 +297,9 @@ const load = async () => {
     if (!currentUser) return navigateTo('/auth/login');
     
     if (currentUser.role !== 'ADMINISTRADOR' && currentUser.role !== 'RESPONSAVEL') {
-        const owner = p.uploadedBy ? p.uploadedBy.username : null;
-        if (!owner || owner !== currentUser.username) {
-             console.warn("Unauthorized edit attempt");
+        const ownerId = p.uploadedBy ? p.uploadedBy.id : null;
+        if (!ownerId || ownerId !== currentUser.id) {
+             console.warn("Unauthorized edit attempt - not the owner");
              return navigateTo(`/publications/${id}`);
         }
     }
@@ -318,6 +352,47 @@ const addRawAuthor = () => {
   suggestions.value = [];
 };
 
+const generateAISummary = async () => {
+  aiError.value = null;
+  
+  // Validate that we have title and abstract
+  if (!form.value.title || !form.value.title.trim()) {
+    aiError.value = "Por favor, preencha o título primeiro";
+    return;
+  }
+  
+  if (!form.value.abstract || !form.value.abstract.trim()) {
+    aiError.value = "Por favor, preencha o resumo primeiro";
+    return;
+  }
+  
+  isGeneratingSummary.value = true;
+  
+  try {
+    const response = await api.post("/ai/generate-summary", {
+      title: form.value.title,
+      abstract: form.value.abstract
+    });
+    
+    if (response.data && response.data.summary) {
+      form.value.aiGeneratedSummary = response.data.summary;
+    } else {
+      aiError.value = "Resposta inválida do servidor";
+    }
+  } catch (e) {
+    console.error("Error generating AI summary:", e);
+    if (e?.response?.data?.message) {
+      aiError.value = e.response.data.message;
+    } else if (e?.response?.status === 503) {
+      aiError.value = "Serviço de IA não disponível. Certifique-se de que o Ollama está a correr.";
+    } else {
+      aiError.value = "Erro ao gerar resumo. Tente novamente.";
+    }
+  } finally {
+    isGeneratingSummary.value = false;
+  }
+};
+
 const save = async () => {
   saving.value = true;
   error.value = null;
@@ -325,18 +400,15 @@ const save = async () => {
     const payload = {
       title: form.value.title,
       authors: form.value.authors,
-      abstract_: form.value.abstract,
+      abstract: form.value.abstract,
       aiGeneratedSummary: form.value.aiGeneratedSummary || null,
       year: form.value.year,
       publisher: form.value.publisher,
       doi: form.value.doi,
-      visible: form.value.visible,
-      confidential: form.value.confidential,
     };
     await api.put(`/publications/${id}`, payload);
     navigateTo(`/publications/${id}`);
   } catch (e) {
-    console.error(e);
     error.value = e?.response?.data?.message || "Erro ao guardar publicação";
   } finally {
     saving.value = false;

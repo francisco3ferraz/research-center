@@ -6,8 +6,12 @@ ifneq (,$(wildcard ./.env))
     APPLICATION_NAME ?= research-center
 endif
 
+
+setup:
+	docker compose build
+
 up:
-	docker compose up -d
+	docker compose up -d --build
 
 down:
 	docker compose down --rmi local --volumes

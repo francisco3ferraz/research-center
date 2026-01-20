@@ -11,6 +11,15 @@ services:
     image: ghusta/fakesmtp
     ports:
       - "2525:25"
+  ollama:
+    build:
+      context: .
+      dockerfile: Dockerfile.ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
   webserver:
     build: .
     ports:
@@ -26,6 +35,11 @@ services:
       - DB_NAME
       - WILDFLY_ADMIN_PASSWORD
       - POSTGRES_DRIVER_VERSION
+      - OLLAMA_URL=http://ollama:11434
     depends_on:
       - db
       - smtp
+      - ollama
+
+volumes:
+  ollama_data:

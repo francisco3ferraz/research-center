@@ -1,0 +1,11 @@
+FROM ollama/ollama:latest
+
+# Start Ollama in the background and pull the model during build
+RUN ollama serve & \
+    sleep 5 && \
+    ollama pull llama3 && \
+    pkill ollama
+
+# Use the default entrypoint
+ENTRYPOINT ["/bin/ollama"]
+CMD ["serve"]

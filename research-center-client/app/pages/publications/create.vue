@@ -135,19 +135,57 @@
         </label>
 
         <label class="block">
-          <div class="text-sm text-slate-600 mb-1">
-            Resumo Gerado por IA
-            <span class="text-xs text-slate-400"
-              >(opcional - será gerado automaticamente ou pode inserir
-              manualmente)</span
+          <div
+            class="text-sm text-slate-600 mb-1 flex items-center justify-between"
+          >
+            <div>
+              Resumo Gerado por IA
+              <span class="text-xs text-slate-400"
+                >(opcional - será gerado automaticamente ou pode inserir
+                manualmente)</span
+              >
+            </div>
+            <button
+              @click="generateAISummary"
+              :disabled="isGeneratingSummary || !title || !abstract"
+              class="bg-blue-600 disabled:opacity-50 text-white px-3 py-1 rounded text-sm flex items-center gap-2 hover:bg-blue-700"
+              type="button"
             >
+              <svg
+                v-if="isGeneratingSummary"
+                class="animate-spin h-4 w-4 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8v8H4z"
+                ></path>
+              </svg>
+              <span>{{
+                isGeneratingSummary ? "A gerar..." : "Gerar Resumo com IA"
+              }}</span>
+            </button>
           </div>
           <textarea
             v-model="aiGeneratedSummary"
             placeholder="Resumo gerado automaticamente por IA (pode editar/corrigir se necessário)"
             class="w-full border rounded px-3 py-2 bg-blue-50"
-            rows="4"
+            :rows="aiGeneratedSummary && aiGeneratedSummary.length > 200 ? 8 : 4"
           ></textarea>
+          <div v-if="aiError" class="text-red-600 text-sm mt-1">
+            {{ aiError }}
+          </div>
         </label>
 
         <label class="block">
@@ -288,6 +326,8 @@ const error = ref(null);
 const fileError = ref(null);
 const validationErrors = ref({});
 const isSubmitting = ref(false);
+const isGeneratingSummary = ref(false);
+const aiError = ref(null);
 
 // Tag management
 const availableTags = ref([]);
@@ -395,6 +435,48 @@ const removeAuthor = (idx) => {
   selectedAuthors.value.splice(idx, 1);
 };
 
+const generateAISummary = async () => {
+  aiError.value = null;
+
+  // Validate that we have title and abstract
+  if (!title.value || !title.value.trim()) {
+    aiError.value = "Por favor, preencha o título primeiro";
+    return;
+  }
+
+  if (!abstract.value || !abstract.value.trim()) {
+    aiError.value = "Por favor, preencha o resumo primeiro";
+    return;
+  }
+
+  isGeneratingSummary.value = true;
+
+  try {
+    const response = await api.post("/ai/generate-summary", {
+      title: title.value,
+      abstract: abstract.value,
+    });
+
+    if (response.data && response.data.summary) {
+      aiGeneratedSummary.value = response.data.summary;
+    } else {
+      aiError.value = "Resposta inválida do servidor";
+    }
+  } catch (e) {
+    console.error("Error generating AI summary:", e);
+    if (e?.response?.data?.message) {
+      aiError.value = e.response.data.message;
+    } else if (e?.response?.status === 503) {
+      aiError.value =
+        "Serviço de IA não disponível. Certifique-se de que o Ollama está a correr.";
+    } else {
+      aiError.value = "Erro ao gerar resumo. Tente novamente.";
+    }
+  } finally {
+    isGeneratingSummary.value = false;
+  }
+};
+
 const submit = async () => {
   error.value = null;
   validationErrors.value = {};
@@ -473,7 +555,7 @@ const submit = async () => {
 
 onMounted(() => {
   if (!auth.token.value) {
-     return navigateTo('/auth/login')
+    return navigateTo("/auth/login");
   }
   fetchAuxData();
 });

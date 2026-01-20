@@ -46,6 +46,9 @@ public class ConfigBean {
     @EJB
     private UserBean userBean;
     
+    @EJB
+    private DocumentBean documentBean;
+    
     @PostConstruct
     public void populateDB() {
         logger.info("Database population started...");
@@ -135,6 +138,16 @@ public class ConfigBean {
                     
                     // Set Random Views (0 - 1200)
                     pub.setViewsCount(rand.nextInt(1201));
+                    
+                    // Add PDF document to 30% of publications
+                    if (rand.nextInt(100) < 30) {
+                        try {
+                            // Create a dummy PDF document
+                            byte[] dummyPdf = createDummyPdf(title);
+                            var inputStream = new java.io.ByteArrayInputStream(dummyPdf);
+                            documentBean.create("publication_" + i + ".pdf", pub.getId(), inputStream);
+                        } catch (Exception ignored) {}
+                    }
 
                     // Add Random Tags (1 to 5 tags)
                     var numTags = 1 + rand.nextInt(5);
@@ -174,6 +187,19 @@ public class ConfigBean {
             logger.severe("Critical error in seeding: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+    
+    private byte[] createDummyPdf(String title) {
+        // Create a minimal valid PDF with the publication title
+        String pdfContent = "%PDF-1.4\n" +
+            "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" +
+            "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n" +
+            "3 0 obj\n<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> " +
+            "/MediaBox [0 0 612 792] /Contents 4 0 R >>\nendobj\n" +
+            "4 0 obj\n<< /Length 44 >>\nstream\nBT /F1 12 Tf 50 700 Td (" + title.replace("(", "").replace(")", "") + ") Tj ET\nendstream\nendobj\n" +
+            "xref\n0 5\n0000000000 65535 f\n0000000009 00000 n\n0000000058 00000 n\n0000000115 00000 n\n" +
+            "0000000300 00000 n\ntrailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n380\n%%EOF";
+        return pdfContent.getBytes(java.nio.charset.StandardCharsets.ISO_8859_1);
     }
     
     private String generateRandomTitle(java.util.Random rand) {
