@@ -32,6 +32,14 @@ public class UserBean {
         
         return users.isEmpty() ? null : users.get(0);
     }
+    
+    public User findByEmail(String email) {
+        var users = em.createQuery("SELECT u FROM User u WHERE u.email = :email", User.class)
+                      .setParameter("email", email)
+                      .getResultList();
+        
+        return users.isEmpty() ? null : users.get(0);
+    }
 
     public User findByUsernameOrThrow(String username) throws MyEntityNotFoundException {
         var user = findByUsername(username);
@@ -229,6 +237,16 @@ public class UserBean {
         user.setPassword(Hasher.hash(newPassword));
         em.merge(user);
         return true;
+    }
+    
+    /**
+     * Sets a new password for a user (used in password reset).
+     * The password will be hashed before storing.
+     */
+    public void setPassword(Long userId, String newPassword) throws MyEntityNotFoundException {
+        var user = find(userId);
+        user.setPassword(Hasher.hash(newPassword));
+        em.merge(user);
     }
 
     /**
