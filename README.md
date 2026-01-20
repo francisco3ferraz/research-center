@@ -1,33 +1,72 @@
-# Wildfly + PostgreSQL with Docker & Docker Compose
+# Research Center Project
 
-## Setup
+## Backend Setup (Wildfly + PostgreSQL)
 
-1. Copy the .env.example file to a .env file:
+### 1. Initial Configuration
+
+Copy the `.env.example` file to a `.env` file:
+
 ```bash
 $ cp .env.example .env
 ```
 
-Make the adjustments you need, to match your needs.
+Make any necessary adjustments to the `.env` file.
 
-2. Start the containers
+### 2. Start Containers
+
+Start the Wildfly and PostgreSQL containers:
+
 ```bash
 $ make up
 ```
 
-## Stoping / Pausing / Restarting the containers
-Please, check the documentation for more useful command tips [here](https://docs.docker.com/compose/reference/)
+### 3. Build & Deploy (Maven Dependencies)
 
+To build the project (which installs Maven dependencies) and deploy the WAR file to the running server:
 
-## How to clear everything from your Computer
+```bash
+$ make deploy
+```
 
-To stop and remove all the containers, images, volumes and network, run:
+_Note: This executes `mvn clean package` and copies the artifact to the container._
+
+### Managing Containers
+
+**Stop and remove only local (custom) images:**
+
+```bash
+$ make down
+```
+
+**Stop and remove EVERYTHING (containers, images, volumes, networks):**
+
 ```bash
 $ make down-all
 ```
 
-## Alternative: remove only local (custom) images:
+For more command tips, check the [Docker Compose documentation](https://docs.docker.com/compose/reference/).
+
+---
+
+## Frontend Setup (Nuxt.js)
+
+The frontend application is located in the `research-center-client` folder.
+
+### 1. Install Dependencies
+
+Navigate to the client directory and install the Node dependencies:
 
 ```bash
-# Only removes the custom wildfly image, if you need to rebuild it again.
-$ make down
+cd research-center-client
+npm install
 ```
+
+### 2. Run Development Server
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+The application will be available at http://localhost:3000.
