@@ -1,9 +1,9 @@
 <template>
   <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-sm">
-      <h2 class="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">Redefinir Password</h2>
+      <h2 class="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">Reset Password</h2>
       <p class="mt-2 text-center text-sm text-gray-500">
-        Introduza a sua nova password.
+        Enter your new password.
       </p>
     </div>
 
@@ -11,42 +11,42 @@
       <!-- Token Validation -->
       <div v-if="validating" class="text-center">
         <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-        <p class="mt-2 text-gray-500">A validar token...</p>
+        <p class="mt-2 text-gray-500">Validating token...</p>
       </div>
 
       <!-- Invalid Token Message -->
       <div v-else-if="!tokenValid" class="text-center">
         <div class="text-red-500 text-6xl mb-4">⚠️</div>
-        <h3 class="text-lg font-semibold text-gray-900">Token Inválido ou Expirado</h3>
-        <p class="mt-2 text-gray-500">O link de recuperação é inválido ou já expirou.</p>
+        <h3 class="text-lg font-semibold text-gray-900">Invalid or Expired Token</h3>
+        <p class="mt-2 text-gray-500">The recovery link is invalid or has expired.</p>
         <NuxtLink to="/auth/forgot-password" class="mt-4 inline-block text-blue-600 hover:text-blue-500">
-          Pedir novo link de recuperação
+          Request new recovery link
         </NuxtLink>
       </div>
 
       <!-- Reset Form -->
       <form v-else class="space-y-6" @submit.prevent="handleSubmit">
         <div>
-          <label for="password" class="block text-sm font-medium leading-6 text-gray-900">Nova Password</label>
+          <label for="password" class="block text-sm font-medium leading-6 text-gray-900">New Password</label>
           <div class="mt-2">
             <input id="password" v-model="form.newPassword" name="password" type="password" required minlength="6" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-3">
           </div>
         </div>
 
         <div>
-          <label for="confirmPassword" class="block text-sm font-medium leading-6 text-gray-900">Confirmar Password</label>
+          <label for="confirmPassword" class="block text-sm font-medium leading-6 text-gray-900">Confirm Password</label>
           <div class="mt-2">
             <input id="confirmPassword" v-model="form.confirmPassword" name="confirmPassword" type="password" required minlength="6" class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-blue-600 sm:text-sm sm:leading-6 px-3">
           </div>
         </div>
 
         <div v-if="form.newPassword && form.confirmPassword && form.newPassword !== form.confirmPassword" class="text-red-500 text-sm">
-          As passwords não coincidem.
+          Passwords do not match.
         </div>
 
         <div>
           <button type="submit" :disabled="loading || form.newPassword !== form.confirmPassword" class="flex w-full justify-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50">
-            {{ loading ? 'A redefinir...' : 'Redefinir Password' }}
+            {{ loading ? 'Resetting...' : 'Reset Password' }}
           </button>
         </div>
         
@@ -58,7 +58,7 @@
       <!-- Success State -->
       <div v-if="success" class="mt-6 text-center">
         <NuxtLink to="/auth/login" class="font-semibold text-blue-600 hover:text-blue-500">
-          Ir para Login
+          Go to Login
         </NuxtLink>
       </div>
     </div>
@@ -102,7 +102,7 @@ onMounted(async () => {
 
 const handleSubmit = async () => {
   if (form.newPassword !== form.confirmPassword) {
-    message.value = 'As passwords não coincidem.'
+    message.value = 'Passwords do not match.'
     return
   }
 
@@ -121,12 +121,12 @@ const handleSubmit = async () => {
     })
 
     success.value = true
-    message.value = 'Password redefinida com sucesso! Pode fazer login com a nova password.'
+    message.value = 'Password reset successfully! You can login with your new password.'
     form.newPassword = ''
     form.confirmPassword = ''
   } catch (e) {
     console.error(e)
-    message.value = e?.data?.message || 'Ocorreu um erro. O token pode ter expirado.'
+    message.value = e?.data?.message || 'An error occurred. The token may have expired.'
   } finally {
     loading.value = false
   }

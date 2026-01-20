@@ -3,17 +3,17 @@
     <div class="bg-white shadow rounded-lg p-6">
       <div class="flex items-center justify-between mb-6">
         <div>
-          <h2 class="text-2xl font-bold text-slate-800">Histór ico de Atividade</h2>
-          <p class="text-sm text-slate-500">Registo das suas ações na plataforma</p>
+          <h2 class="text-2xl font-bold text-slate-800">Activity History</h2>
+          <p class="text-sm text-slate-500">Record of your actions on the platform</p>
         </div>
-        <NuxtLink to="/profile" class="text-blue-600 hover:underline text-sm">Voltar ao Perfil</NuxtLink>
+        <NuxtLink to="/profile" class="text-blue-600 hover:underline text-sm">Back to Profile</NuxtLink>
       </div>
 
-      <div v-if="loading" class="text-slate-600">A carregar histórico...</div>
+      <div v-if="loading" class="text-slate-600">Loading history...</div>
       <div v-else>
         <div v-if="items.length === 0" class="text-center py-12 text-slate-500">
           <div class="text-4xl mb-3">📋</div>
-          <div>Nenhuma atividade registada</div>
+          <div>No activity recorded</div>
         </div>
 
         <div v-else class="space-y-3">
@@ -26,7 +26,7 @@
                 </div>
                 <div class="text-sm text-slate-600 mt-1">{{ log.description }}</div>
                 <div v-if="log.changedFields" class="text-xs text-slate-400 mt-1">
-                  Campos alterados: {{ log.changedFields }}
+                  Changed fields: {{ log.changedFields }}
                 </div>
               </div>
               <div class="text-xs text-slate-400 whitespace-nowrap ml-4">
@@ -37,10 +37,10 @@
         </div>
 
         <div v-if="items.length > 0" class="flex justify-between items-center mt-6 pt-4 border-t">
-          <div class="text-sm text-slate-600">Mostrando {{ items.length }} atividades</div>
+          <div class="text-sm text-slate-600">Showing {{ items.length }} activities</div>
           <div class="flex gap-2">
             <button @click="loadMore" v-if="hasMore" class="px-4 py-2 border rounded bg-white hover:bg-gray-50">
-              Carregar mais
+              Load More
             </button>
           </div>
         </div>
@@ -92,12 +92,12 @@ const loadMore = () => {
 
 const getActionLabel = (actionType) => {
   const labels = {
-    'CREATE': '➕ Criado',
-    'UPDATE': '✏️ Atualizado',
-    'DELETE': '🗑️ Removido',
+    'CREATE': '➕ Created',
+    'UPDATE': '✏️ Updated',
+    'DELETE': '🗑️ Removed',
     'UPLOAD': '📤 Upload',
-    'COMMENT': '💬 Comentário',
-    'RATE': '⭐ Avaliação'
+    'COMMENT': '💬 Comment',
+    'RATE': '⭐ Rating'
   }
   return labels[actionType] || actionType
 }

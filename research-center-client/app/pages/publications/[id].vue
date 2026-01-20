@@ -2,7 +2,7 @@
   <div class="container mx-auto px-4 py-6">
     <div class="bg-white shadow rounded-lg p-6">
       <div v-if="!isEditRoute && loading" class="text-slate-600">
-        A carregar publicação...
+        Loading publication...
       </div>
       <div
         v-else-if="!isEditRoute"
@@ -25,7 +25,7 @@
                 @click="toggleTagSubscription(t)"
                 class="text-xs text-blue-600 hover:underline"
               >
-                {{ isSubscribed(t.id) ? "Cancelar subscrição" : "Subscrever" }}
+                {{ isSubscribed(t.id) ? "Unsubscribe" : "Subscribe" }}
               </button>
             </span>
           </div>
@@ -39,7 +39,7 @@
             class="mt-4 p-4 bg-blue-50 border-l-4 border-blue-400 rounded"
           >
             <h3 class="text-sm font-semibold text-blue-900 mb-2">
-              📝 Resumo Gerado por IA
+              📝 AI Generated Summary
             </h3>
             <div class="text-sm text-slate-700 relative">
               <div class="whitespace-pre-wrap">
@@ -50,7 +50,7 @@
                 @click="isSummaryExpanded = !isSummaryExpanded"
                 class="mt-2 text-xs font-semibold text-blue-700 hover:text-blue-900 focus:outline-none flex items-center gap-1"
               >
-                {{ isSummaryExpanded ? 'Minimizar' : 'Ler mais' }}
+                {{ isSummaryExpanded ? 'Minimize' : 'Read more' }}
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" :class="{ 'rotate-180': isSummaryExpanded }">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
@@ -65,14 +65,14 @@
               :disabled="isFetchingPdf"
               class="px-3 py-1 bg-blue-600 text-white rounded"
             >
-              Visualizar PDF
+              View PDF
             </button>
             <button
               v-if="pub.documentId && pdfUrl"
               @click="pdfUrl = null"
               class="px-3 py-1 bg-red-600 text-white rounded"
             >
-              Fechar PDF
+              Close PDF
             </button>
             <button
               v-if="pub.documentId"
@@ -80,17 +80,17 @@
               :disabled="isFetchingPdf"
               class="px-3 py-1 border rounded"
             >
-              Descarregar
+              Download
             </button>
             <button
               v-if="canEdit"
               @click="goEdit"
               class="px-3 py-1 border rounded text-sm text-blue-600"
             >
-              Editar
+              Edit
             </button>
             <div v-if="isFetchingPdf" class="text-sm text-slate-500">
-              A obter ficheiro...
+              Fetching file...
             </div>
           </div>
 
@@ -102,7 +102,7 @@
           </div>
 
           <div class="mt-6">
-            <h3 class="text-lg font-semibold">Comentários</h3>
+            <h3 class="text-lg font-semibold">Comments</h3>
             <div class="mt-3 space-y-3">
               <div
                 v-for="c in displayedComments"
@@ -111,9 +111,9 @@
               >
                   <div class="flex items-center gap-2">
                     <div class="font-medium">
-                        {{ c.author?.name || "Anónimo" }}
+                        {{ c.author?.name || "Anonymous" }}
                     </div>
-                     <span v-if="c.visible === false" class="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">Oculto</span>
+                     <span v-if="c.visible === false" class="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">Hidden</span>
                   </div>
                   <div class="flex items-center gap-2">
                       <div class="text-xs text-slate-400">
@@ -122,7 +122,7 @@
                         }}
                       </div>
                       <button v-if="canManageComments" @click="toggleCommentVisibility(c)" class="text-xs text-blue-600 hover:underline font-medium">
-                        {{ c.visible ? 'Ocultar' : 'Mostrar' }}
+                        {{ c.visible ? 'Hide' : 'Show' }}
                       </button>
                   </div>
                 <div class="mt-2 text-slate-700">
@@ -138,18 +138,18 @@
                   :disabled="commentsPage <= 0"
                   class="px-3 py-1 border rounded bg-white"
                 >
-                  Anterior
+                  Previous
                 </button>
                 <button
                   @click="commentsNext"
                   :disabled="commentsPage + 1 >= totalCommentsPages"
                   class="ml-2 px-3 py-1 border rounded bg-white"
                 >
-                  Seguinte
+                  Next
                 </button>
               </div>
               <div class="text-sm text-slate-600">
-                Página {{ commentsPage + 1 }} / {{ totalCommentsPages }}
+                Page {{ commentsPage + 1 }} / {{ totalCommentsPages }}
               </div>
             </div>
 
@@ -157,19 +157,19 @@
               <textarea
                 v-model="newComment"
                 class="w-full border p-3 rounded"
-                placeholder="Adicionar comentário"
+                placeholder="Add comment"
               ></textarea>
               <div class="mt-2 text-right">
                 <button
                   @click="postComment"
                   class="bg-blue-600 text-white px-4 py-2 rounded"
                 >
-                  Enviar comentário
+                  Post comment
                 </button>
               </div>
             </div>
             <div v-else class="text-sm text-slate-500 mt-3">
-              Faça login para comentar.
+              Log in to comment.
             </div>
           </div>
 
@@ -177,15 +177,15 @@
             v-if="canEdit || auth.user.value?.role === 'ADMINISTRADOR'"
             class="mt-6"
           >
-            <h3 class="text-lg font-semibold">Histórico de Edições</h3>
+            <h3 class="text-lg font-semibold">Edit History</h3>
             <div v-if="loadingHistory" class="text-sm text-slate-500 mt-2">
-              A carregar histórico...
+              Loading history...
             </div>
             <div
               v-else-if="history.length === 0"
               class="text-sm text-slate-500 mt-2"
             >
-              Sem histórico de edições
+              No edit history
             </div>
             <div v-else class="mt-3 space-y-2">
               <div
@@ -205,7 +205,7 @@
                       v-if="h.changedFields"
                       class="text-xs text-slate-400 mt-1"
                     >
-                      Campos: {{ h.changedFields }}
+                      Fields: {{ h.changedFields }}
                     </div>
                   </div>
                   <div class="text-xs text-slate-400 whitespace-nowrap">
@@ -225,7 +225,7 @@
               {{ ratings.averageRating?.toFixed(2) || "—" }}
             </div>
             <div class="text-sm text-slate-500">
-              Média • {{ ratings.totalRatings || 0 }} avaliações
+              Average • {{ ratings.totalRatings || 0 }} ratings
             </div>
           </div>
 
@@ -243,7 +243,7 @@
           </div>
 
           <div class="mt-4">
-            <h4 class="font-medium">Avaliações</h4>
+            <h4 class="font-medium">Ratings</h4>
             <div class="mt-2 space-y-2">
               <div
                 v-for="r in displayedRatings"
@@ -262,7 +262,7 @@
                 :disabled="ratingsPage <= 0"
                 class="px-3 py-1 border rounded bg-white"
               >
-                Anterior
+                Previous
               </button>
               <div class="text-sm text-slate-600">
                 {{ ratingsPage + 1 }} / {{ totalRatingsPages }}
@@ -272,7 +272,7 @@
                 :disabled="ratingsPage + 1 >= totalRatingsPages"
                 class="px-3 py-1 border rounded bg-white"
               >
-                Seguinte
+                Next
               </button>
             </div>
           </div>
@@ -396,7 +396,7 @@ const toggleTagSubscription = async (tag) => {
     subscribedTagIds.value = new Set(subscribedTagIds.value);
   } catch (e) {
     console.error("Subscription error", e);
-    alert(e?.response?.data?.message || "Erro ao atualizar subscrição");
+    alert(e?.response?.data?.message || "Error updating subscription");
   }
 };
 
@@ -412,8 +412,8 @@ const previewPdf = async () => {
     const blob = new Blob([resp.data], { type: "application/pdf" });
     pdfUrl.value = URL.createObjectURL(blob);
   } catch (e) {
-    console.error("Erro ao obter ficheiro", e);
-    alert("Não foi possível obter o ficheiro. Verifique se tem permissões.");
+    console.error("Error fetching file", e);
+    alert("Could not fetch file. Check if you have permissions.");
   } finally {
     isFetchingPdf.value = false;
   }
@@ -436,8 +436,8 @@ const downloadPdf = async () => {
     a.remove();
     URL.revokeObjectURL(url);
   } catch (e) {
-    console.error("Erro ao descarregar ficheiro", e);
-    alert("Não foi possível descarregar o ficheiro.");
+    console.error("Error downloading file", e);
+    alert("Could not download file.");
   } finally {
     isFetchingPdf.value = false;
   }
@@ -533,6 +533,6 @@ const toggleCommentVisibility = async (c) => {
     try {
         await api.patch(`/comments/${c.id}/visibility`, { visible: !c.visible });
         c.visible = !c.visible; 
-    } catch(e) { console.error(e); alert('Erro ao alterar visibilidade'); }
+    } catch(e) { console.error(e); alert('Error changing visibility'); }
 };
 </script>

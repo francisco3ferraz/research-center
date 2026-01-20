@@ -3,15 +3,15 @@
     <div class="bg-white shadow rounded-lg p-6">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-2xl font-semibold">Gestão de Tags</h2>
-          <p class="text-sm text-slate-500">Criar, editar e remover tags (RESPONSÁVEL / ADMIN)</p>
+          <h2 class="text-2xl font-semibold">Tag Management</h2>
+          <p class="text-sm text-slate-500">Create, edit and remove tags (MANAGER / ADMIN)</p>
         </div>
         <div>
-          <button @click="openCreate" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">+ Nova Tag</button>
+          <button @click="openCreate" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">+ New Tag</button>
         </div>
       </div>
 
-      <div v-if="loading" class="text-slate-600">A carregar tags...</div>
+      <div v-if="loading" class="text-slate-600">Loading tags...</div>
 
       <div v-else>
         <ul class="space-y-2">
@@ -21,8 +21,8 @@
               <div class="text-sm text-slate-500">{{ t.description }}</div>
             </div>
             <div class="flex items-center gap-3">
-              <button @click="openEdit(t)" class="text-blue-600 hover:text-blue-900">Editar</button>
-              <button @click="removeTag(t)" class="text-red-600 hover:text-red-800">Remover</button>
+              <button @click="openEdit(t)" class="text-blue-600 hover:text-blue-900">Edit</button>
+              <button @click="removeTag(t)" class="text-red-600 hover:text-red-800">Remove</button>
             </div>
           </li>
         </ul>
@@ -36,24 +36,24 @@
       <div v-if="showForm" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-40">
         <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-medium">{{ editingId ? 'Editar Tag' : 'Criar Tag' }}</h3>
-            <button @click="closeForm" class="text-gray-500 hover:text-gray-700">Fechar</button>
+            <h3 class="text-lg font-medium">{{ editingId ? 'Edit Tag' : 'Create Tag' }}</h3>
+            <button @click="closeForm" class="text-gray-500 hover:text-gray-700">Close</button>
           </div>
 
           <div class="grid grid-cols-1 gap-3">
             <label>
-              <div class="text-sm text-slate-600">Nome</div>
+              <div class="text-sm text-slate-600">Name</div>
               <input v-model="form.name" class="w-full border rounded px-3 py-2" />
             </label>
             <label>
-              <div class="text-sm text-slate-600">Descrição</div>
+              <div class="text-sm text-slate-600">Description</div>
               <textarea v-model="form.description" class="w-full border rounded px-3 py-2" rows="3"></textarea>
             </label>
           </div>
 
           <div class="mt-4 flex justify-end gap-2">
-            <button @click="closeForm" class="px-3 py-2 border rounded">Cancelar</button>
-            <button @click="saveTag" class="bg-blue-600 text-white px-3 py-2 rounded">Guardar</button>
+            <button @click="closeForm" class="px-3 py-2 border rounded">Cancel</button>
+            <button @click="saveTag" class="bg-blue-600 text-white px-3 py-2 rounded">Save</button>
           </div>
         </div>
       </div>
@@ -80,7 +80,7 @@ const load = async () => {
   try {
     const resp = await api.get('/tags')
     tags.value = resp.data || []
-  } catch (e) { console.error(e); error.value = e?.response?.data?.message || 'Erro ao carregar tags' }
+  } catch (e) { console.error(e); error.value = e?.response?.data?.message || 'Error loading tags' }
   finally { loading.value = false }
 }
 
@@ -98,12 +98,12 @@ const saveTag = async () => {
     }
     await load()
     closeForm()
-  } catch (e) { console.error(e); error.value = e?.response?.data?.message || 'Erro ao guardar tag' }
+  } catch (e) { console.error(e); error.value = e?.response?.data?.message || 'Error saving tag' }
 }
 
 const removeTag = async (t) => {
-  if (!confirm(`Remover tag ${t.name}?`)) return
-  try { await api.delete(`/tags/${t.id}`); await load() } catch (e) { console.error(e); alert(e?.response?.data?.message || 'Erro ao remover tag') }
+  if (!confirm(`Remove tag ${t.name}?`)) return
+  try { await api.delete(`/tags/${t.id}`); await load() } catch (e) { console.error(e); alert(e?.response?.data?.message || 'Error removing tag') }
 }
 
 onMounted(() => {

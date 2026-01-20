@@ -23,7 +23,7 @@
                 {{
                   auth.user.value?.name ||
                   auth.user.value?.username ||
-                  "Utilizador"
+                  "User"
                 }}
               </div>
               <div class="text-sm text-slate-500">
@@ -45,14 +45,14 @@
         <h3
           class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center gap-2"
         >
-          <span>👤</span> Informações Pessoais
+          <span>👤</span> Personal Information
         </h3>
 
-        <div v-if="loading" class="text-slate-600">A carregar...</div>
+        <div v-if="loading" class="text-slate-600">Loading...</div>
         <form @submit.prevent="saveProfile" v-else class="space-y-4">
           <div>
             <label class="block text-sm font-medium text-slate-700"
-              >Nome Completo</label
+              >Full Name</label
             >
             <input
               v-model="form.name"
@@ -74,7 +74,7 @@
             <h4
               class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2"
             >
-              Detalhes da Conta
+              Account Details
             </h4>
             <div class="grid grid-cols-2 gap-4 text-sm">
               <div>
@@ -84,7 +84,7 @@
                 }}</span>
               </div>
               <div>
-                <span class="block text-slate-400 text-xs">Papel</span>
+                <span class="block text-slate-400 text-xs">Role</span>
                 <span
                   class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
                 >
@@ -92,14 +92,14 @@
                 </span>
               </div>
               <div>
-                <span class="block text-slate-400 text-xs">Estado</span>
+                <span class="block text-slate-400 text-xs">Status</span>
                 <span
                   :class="
                     auth.user.value?.active ? 'text-green-600' : 'text-red-600'
                   "
                   class="font-medium"
                 >
-                  {{ auth.user.value?.active ? "Ativo" : "Inativo" }}
+                  {{ auth.user.value?.active ? "Active" : "Inactive" }}
                 </span>
               </div>
             </div>
@@ -120,13 +120,13 @@
                 @click="reload"
                 class="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded"
               >
-                Cancelar
+                Cancel
               </button>
               <button
                 type="submit"
                 class="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 text-sm font-medium"
               >
-                Guardar Alterações
+                Save Changes
               </button>
             </div>
           </div>
@@ -139,12 +139,12 @@
           <h3
             class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center gap-2"
           >
-            <span>🔒</span> Segurança
+            <span>🔒</span> Security
           </h3>
           <form @submit.prevent="changePassword" class="space-y-3">
             <div>
               <label class="block text-sm font-medium text-slate-700"
-                >Senha Atual</label
+                >Current Password</label
               >
               <input
                 v-model="pwd.oldPassword"
@@ -154,7 +154,7 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-slate-700"
-                >Nova Senha</label
+                >New Password</label
               >
               <input
                 v-model="pwd.newPassword"
@@ -164,7 +164,7 @@
             </div>
             <div>
               <label class="block text-sm font-medium text-slate-700"
-                >Confirmar Nova Senha</label
+                >Confirm New Password</label
               >
               <input
                 v-model="pwd.confirmPassword"
@@ -188,13 +188,13 @@
                   @click="clearPwd"
                   class="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded"
                 >
-                  Limpar
+                  Clear
                 </button>
                 <button
                   type="submit"
                   class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700 text-sm font-medium whitespace-nowrap"
                 >
-                  Alterar Senha
+                  Change Password
                 </button>
               </div>
             </div>
@@ -206,11 +206,11 @@
           <h3
             class="text-lg font-bold text-slate-800 mb-4 border-b pb-2 flex items-center gap-2"
           >
-            <span>📊</span> Atividade
+            <span>📊</span> Activity
           </h3>
           <p class="text-sm text-slate-600 mb-4">
-            Consulte o histórico de todas as suas ações na plataforma, incluindo
-            publicações, edições, comentários e avaliações.
+            View the history of all your actions on the platform, including
+            publications, edits, comments and ratings.
           </p>
           <NuxtLink
             to="/profile/activity"
@@ -232,7 +232,7 @@
                 />
               </svg>
             </div>
-            <span class="font-medium">Ver Histórico de Atividade Completo</span>
+            <span class="font-medium">View Full Activity History</span>
           </NuxtLink>
         </div>
       </div>
@@ -283,11 +283,11 @@ const saveProfile = async () => {
       name: form.value.name,
       email: form.value.email,
     });
-    profileMsg.value = "Perfil atualizado com sucesso.";
+    profileMsg.value = "Profile updated successfully.";
     auth.user.value = resp.data;
   } catch (e) {
     profileError.value =
-      e?.response?.data?.message || "Erro ao atualizar perfil.";
+      e?.response?.data?.message || "Error updating profile.";
   }
 };
 
@@ -295,7 +295,7 @@ const changePassword = async () => {
   pwdMsg.value = "";
   pwdError.value = "";
   if (pwd.value.newPassword !== pwd.value.confirmPassword) {
-    pwdError.value = "Nova senha e confirmação não coincidem.";
+    pwdError.value = "New password and confirmation do not match.";
     return;
   }
   try {
@@ -305,9 +305,9 @@ const changePassword = async () => {
       confirmPassword: pwd.value.confirmPassword,
     });
     clearPwd();
-    pwdMsg.value = "Senha alterada com sucesso.";
+    pwdMsg.value = "Password changed successfully.";
   } catch (e) {
-    pwdError.value = e?.response?.data || "Erro ao alterar senha.";
+    pwdError.value = e?.response?.data || "Error changing password.";
   }
 };
 

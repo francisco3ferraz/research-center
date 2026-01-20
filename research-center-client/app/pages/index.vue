@@ -4,7 +4,7 @@
       <div>
         <h1 class="text-3xl font-bold text-slate-800">Research Center</h1>
         <p class="text-sm text-slate-500">
-          Explorar publicações, comentar e avaliar.
+          Explore publications, comment and rate.
         </p>
       </div>
       <div class="flex items-center gap-3">
@@ -12,13 +12,13 @@
           v-if="auth.token.value"
           to="/publications/my"
           class="border border-blue-600 text-blue-600 px-4 py-2 rounded shadow hover:bg-blue-50"
-          >Minhas Publicações</NuxtLink
+          >My Publications</NuxtLink
         >
         <NuxtLink
           v-if="auth.token.value"
           to="/publications/create"
           class="bg-green-600 text-white px-4 py-2 rounded shadow hover:bg-green-700"
-          >Nova Publicação</NuxtLink
+          >New Publication</NuxtLink
         >
         <NuxtLink
           to="/auth/login"
@@ -33,7 +33,7 @@
       <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4 items-end">
         <input
           v-model="search"
-          placeholder="Pesquisar título, autor ou tag..."
+          placeholder="Search title, author or tag..."
           class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-200"
         />
 
@@ -42,17 +42,17 @@
           @change="fetchPubs"
           class="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-200"
         >
-          <option value="">Ordenar por...</option>
-          <option value="comments">Nº Comentários</option>
-          <option value="rating">Rating Médio</option>
-          <option value="ratings_count">Nº Ratings</option>
-          <option value="views">Nº Visualizações</option>
-          <option value="date">Data Upload</option>
+          <option value="">Sort by...</option>
+          <option value="comments">Comments Count</option>
+          <option value="rating">Average Rating</option>
+          <option value="ratings_count">Ratings Count</option>
+          <option value="views">Views Count</option>
+          <option value="date">Upload Date</option>
         </select>
 
         <div v-if="auth.token.value && (auth.user.value?.role === 'ADMINISTRADOR' || auth.user.value?.role === 'RESPONSAVEL')" class="flex items-center gap-2 h-full pb-2">
             <input type="checkbox" v-model="showHidden" id="showHidden" class="w-4 h-4 text-blue-600 rounded">
-            <label for="showHidden" class="text-sm select-none cursor-pointer">Mostrar Ocultos</label>
+            <label for="showHidden" class="text-sm select-none cursor-pointer">Show Hidden</label>
         </div>
 
         <div class="flex gap-2 w-full">
@@ -60,18 +60,18 @@
             @click="fetchPubs"
             class="flex-1 bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700"
           >
-            Pesquisar
+            Search
           </button>
           <button @click="clearFilters" class="px-4 py-2 border rounded hover:bg-gray-50">
-            Limpar
+            Clear
           </button>
         </div>
       </div>
 
-      <div v-if="loading" class="text-slate-600">A carregar...</div>
+      <div v-if="loading" class="text-slate-600">Loading...</div>
       <div v-else>
         <div v-if="items.length === 0" class="text-gray-500">
-          Nenhuma publicação encontrada.
+          No publications found.
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div
@@ -95,7 +95,7 @@
                 {{ p.commentsCount || 0 }}
               </div>
               <div class="text-xs text-slate-400">
-                {{ p.viewsCount || 0 }} visualizações
+                {{ p.viewsCount || 0 }} views
               </div>
             </div>
           </div>
@@ -103,7 +103,7 @@
 
         <div class="flex justify-between items-center mt-6">
           <div class="text-sm text-slate-600">
-            Página {{ page + 1 }} de {{ totalPages }}
+            Page {{ page + 1 }} of {{ totalPages }}
           </div>
           <div class="flex gap-2">
             <button
@@ -111,14 +111,14 @@
               @click="prevPage"
               class="px-3 py-1 border rounded bg-white"
             >
-              Anterior
+              Previous
             </button>
             <button
               :disabled="page + 1 >= totalPages"
               @click="nextPage"
               class="px-3 py-1 border rounded bg-white"
             >
-              Seguinte
+              Next
             </button>
           </div>
         </div>

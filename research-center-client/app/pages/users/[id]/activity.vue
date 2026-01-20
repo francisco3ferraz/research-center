@@ -3,17 +3,17 @@
     <div class="bg-white shadow rounded-lg p-6">
       <div class="flex items-center justify-between mb-6">
         <div>
-          <h2 class="text-2xl font-bold text-slate-800">Histórico de Atividade do Utilizador</h2>
-          <p class="text-sm text-slate-500">Visualizar ações deste utilizador</p>
+          <h2 class="text-2xl font-bold text-slate-800">User Activity History</h2>
+          <p class="text-sm text-slate-500">View actions for this user</p>
         </div>
-        <NuxtLink to="/users" class="text-blue-600 hover:underline text-sm">Voltar a Utilizadores</NuxtLink>
+        <NuxtLink to="/users" class="text-blue-600 hover:underline text-sm">Back to Users</NuxtLink>
       </div>
 
-      <div v-if="loading" class="text-slate-600">A carregar histórico...</div>
+      <div v-if="loading" class="text-slate-600">Loading history...</div>
       <div v-else>
         <div v-if="items.length === 0" class="text-center py-12 text-slate-500">
           <div class="text-4xl mb-3">📋</div>
-          <div>Nenhuma atividade registada</div>
+          <div>No activity recorded</div>
         </div>
 
         <div v-else class="space-y-3">
@@ -26,7 +26,7 @@
                 </div>
                 <div class="text-sm text-slate-600 mt-1">{{ log.description }}</div>
                 <div v-if="log.changedFields" class="text-xs text-slate-400 mt-1">
-                  Campos alterados: {{ log.changedFields }}
+                  Changed fields: {{ log.changedFields }}
                 </div>
               </div>
               <div class="text-xs text-slate-400 whitespace-nowrap ml-4">
@@ -44,15 +44,15 @@
             :disabled="page <= 1" 
             class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Anterior
+            Previous
           </button>
-          <span class="text-sm text-slate-600">Página {{ page }}</span>
+          <span class="text-sm text-slate-600">Page {{ page }}</span>
           <button 
             @click="nextPage" 
             :disabled="!hasMore" 
             class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Próxima
+            Next
           </button>
       </div>
     </div>
@@ -89,12 +89,12 @@ const fetchActivity = async () => {
 
 const getActionLabel = (actionType) => {
   const labels = {
-    'CREATE': '➕ Criado',
-    'UPDATE': '✏️ Atualizado',
-    'DELETE': '🗑️ Removido',
+    'CREATE': '➕ Created',
+    'UPDATE': '✏️ Updated',
+    'DELETE': '🗑️ Removed',
     'UPLOAD': '📤 Upload',
-    'COMMENT': '💬 Comentário',
-    'RATE': '⭐ Avaliação'
+    'COMMENT': '💬 Comment',
+    'RATE': '⭐ Rating'
   }
   return labels[actionType] || actionType
 }

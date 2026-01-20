@@ -1,168 +1,180 @@
 <template>
-  <div class="container mx-auto px-4 py-8">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold text-gray-900">Notificações</h1>
-      <button 
-        v-if="notifications.length > 0"
-        @click="markAllAsRead"
-        :disabled="loading"
-        class="text-sm text-blue-600 hover:text-blue-500"
-      >
-        Marcar todas como lidas
-      </button>
-    </div>
+  <div class="px-4 sm:px-6 lg:px-8 py-8">
+    <div class="max-w-4xl mx-auto">
+      <!-- Header -->
+      <div class="mb-6">
+        <h1 class="text-3xl font-bold text-gray-900">Notifications</h1>
+        <p class="mt-2 text-sm text-gray-600">
+          Manage all your notifications
+        </p>
+      </div>
 
-    <!-- Loading State -->
-    <div v-if="loading && notifications.length === 0" class="text-center py-12">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-      <p class="mt-2 text-gray-500">A carregar notificações...</p>
-    </div>
-
-    <!-- Empty State -->
-    <div v-else-if="notifications.length === 0" class="text-center py-12 bg-gray-50 rounded-lg">
-      <div class="text-gray-400 text-5xl mb-4">🔔</div>
-      <h3 class="text-lg font-medium text-gray-900">Sem notificações</h3>
-      <p class="mt-1 text-gray-500">Não tem notificações por ler.</p>
-    </div>
-
-    <!-- Notifications List -->
-    <div v-else class="space-y-4">
-      <div 
-        v-for="notification in notifications" 
-        :key="notification.id"
-        class="bg-white rounded-lg shadow p-4 border-l-4 transition-all"
-        :class="notification.read ? 'border-gray-200 opacity-60' : 'border-blue-500'"
-      >
-        <div class="flex justify-between items-start">
-          <div class="flex-1">
-            <div class="flex items-center gap-2">
-              <span class="text-lg">{{ getNotificationIcon(notification.type) }}</span>
-              <h3 class="font-medium text-gray-900">{{ notification.title }}</h3>
-              <span v-if="!notification.read" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                Nova
-              </span>
-            </div>
-            <p class="mt-1 text-sm text-gray-600">{{ notification.message }}</p>
-            <p class="mt-2 text-xs text-gray-400">{{ formatDate(notification.createdAt) }}</p>
-          </div>
-          <div class="flex gap-2 ml-4">
-            <button 
-              v-if="!notification.read"
-              @click="markAsRead(notification.id)"
-              class="text-sm text-blue-600 hover:text-blue-500"
-              title="Marcar como lida"
-            >
-              ✓
-            </button>
-            <button 
-              @click="deleteNotification(notification.id)"
-              class="text-sm text-red-600 hover:text-red-500"
-              title="Remover"
-            >
-              🗑️
-            </button>
-          </div>
-        </div>
-        
-        <!-- Link to related content -->
-        <div v-if="notification.relatedEntityType && notification.relatedEntityId" class="mt-3">
-          <NuxtLink 
-            v-if="notification.relatedEntityType === 'PUBLICATION'"
-            :to="`/publications/${notification.relatedEntityId}`"
-            class="text-sm text-blue-600 hover:underline"
+      <!-- Actions Bar -->
+      <div class="mb-6 flex justify-between items-center">
+        <div class="flex gap-4">
+          <button
+            @click="filterUnread = !filterUnread"
+            :class="[
+              'px-4 py-2 rounded-md text-sm font-medium transition-colors',
+              filterUnread
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            ]"
           >
-            Ver publicação →
-          </NuxtLink>
+            {{ filterUnread ? 'Show All' : 'Unread Only' }}
+          </button>
+        </div>
+        <button
+          v-if="notificationsState.unreadCount.value > 0"
+          @click="handleMarkAllAsRead"
+          class="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 transition-colors"
+        >
+          Mark All as Read
+        </button>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="notificationsState.loading.value" class="text-center py-12">
+        <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p class="mt-4 text-gray-600">Loading notifications...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div
+        v-else-if="displayedNotifications.length === 0"
+        class="text-center py-12 bg-white rounded-lg shadow"
+      >
+        <div class="text-6xl mb-4">🔔</div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">
+          {{ filterUnread ? 'No unread notifications' : 'No notifications' }}
+        </h3>
+        <p class="text-gray-600">
+          {{ filterUnread ? 'All your notifications have been read.' : 'You have no notifications at the moment.' }}
+        </p>
+      </div>
+
+      <!-- Notifications List -->
+      <div v-else class="space-y-4">
+        <div
+          v-for="notification in displayedNotifications"
+          :key="notification.id"
+          class="bg-white rounded-lg shadow hover:shadow-md transition-shadow"
+          :class="{ 'border-l-4 border-blue-600': !notification.read }"
+        >
+          <div class="p-6">
+            <div class="flex items-start gap-4">
+              <!-- Icon -->
+              <div class="flex-shrink-0 text-3xl">
+                {{ notificationsState.getNotificationIcon(notification.type) }}
+              </div>
+
+              <!-- Content -->
+              <div class="flex-1 min-w-0">
+                <div class="flex items-start justify-between gap-4">
+                  <div class="flex-1">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-1">
+                      {{ notification.title }}
+                    </h3>
+                    <p class="text-gray-700 mb-3">
+                      {{ notification.message }}
+                    </p>
+                    <div class="flex items-center gap-4 text-sm text-gray-500">
+                      <span>{{ notificationsState.formatDate(notification.createdAt) }}</span>
+                      <span v-if="notification.read && notification.readAt" class="text-green-600">
+                        ✓ Read on {{ notificationsState.formatDate(notification.readAt) }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Status Badge -->
+                  <div v-if="!notification.read" class="flex-shrink-0">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      Unread
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="mt-4 flex items-center gap-3">
+                  <!-- Link to related content -->
+                  <NuxtLink
+                    v-if="notification.relatedEntityType === 'PUBLICATION' && notification.relatedEntityId"
+                    :to="`/publications/${notification.relatedEntityId}`"
+                    class="inline-flex items-center px-3 py-1.5 border border-blue-600 text-blue-600 rounded-md text-sm font-medium hover:bg-blue-50 transition-colors"
+                  >
+                    View Publication →
+                  </NuxtLink>
+
+                  <!-- Mark as read -->
+                  <button
+                    v-if="!notification.read"
+                    @click="handleMarkAsRead(notification.id)"
+                    class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    ✓ Mark as Read
+                  </button>
+
+                  <!-- Delete -->
+                  <button
+                    @click="handleDeleteNotification(notification.id)"
+                    class="inline-flex items-center px-3 py-1.5 border border-red-300 text-red-600 rounded-md text-sm font-medium hover:bg-red-50 transition-colors"
+                  >
+                    🗑️ Remove
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Error Message -->
-    <div v-if="error" class="mt-4 p-4 bg-red-50 text-red-600 rounded-lg">
-      {{ error }}
+      <!-- Stats -->
+      <div v-if="!notificationsState.loading.value && displayedNotifications.length > 0" class="mt-6 text-center text-sm text-gray-600">
+        Showing {{ displayedNotifications.length }} of {{ notificationsState.notifications.value.length }} notifications
+        <span v-if="notificationsState.unreadCount.value > 0" class="font-medium text-blue-600">
+          ({{ notificationsState.unreadCount.value }} unread)
+        </span>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import { ref, computed, onMounted } from 'vue'
+
 definePageMeta({
-  middleware: ['auth']
+  middleware: 'auth'
 })
 
-const api = useApi()
-const notifications = ref([])
-const loading = ref(true)
-const error = ref(null)
-
-const fetchNotifications = async () => {
-  loading.value = true
-  error.value = null
-  try {
-    const response = await api.get('/notifications')
-    notifications.value = response.data || []
-  } catch (e) {
-    console.error('Failed to fetch notifications', e)
-    error.value = 'Erro ao carregar notificações.'
-  } finally {
-    loading.value = false
-  }
-}
-
-const markAsRead = async (id) => {
-  try {
-    await api.patch(`/notifications/${id}/read`)
-    const notification = notifications.value.find(n => n.id === id)
-    if (notification) {
-      notification.read = true
-    }
-  } catch (e) {
-    console.error('Failed to mark as read', e)
-  }
-}
-
-const markAllAsRead = async () => {
-  try {
-    for (const n of notifications.value.filter(n => !n.read)) {
-      await api.patch(`/notifications/${n.id}/read`)
-      n.read = true
-    }
-  } catch (e) {
-    console.error('Failed to mark all as read', e)
-  }
-}
-
-const deleteNotification = async (id) => {
-  try {
-    await api.delete(`/notifications/${id}`)
-    notifications.value = notifications.value.filter(n => n.id !== id)
-  } catch (e) {
-    console.error('Failed to delete notification', e)
-  }
-}
-
-const getNotificationIcon = (type) => {
-  const icons = {
-    'NEW_PUBLICATION_WITH_TAG': '📄',
-    'NEW_COMMENT_ON_TAG': '💬',
-    'NEW_RATING': '⭐',
-    'SYSTEM': '🔔'
-  }
-  return icons[type] || '🔔'
-}
-
-const formatDate = (dateString) => {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  return date.toLocaleDateString('pt-PT', { 
-    day: '2-digit', 
-    month: 'short', 
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-}
+const notificationsState = useNotifications()
+const filterUnread = ref(false)
 
 onMounted(() => {
-  fetchNotifications()
+  notificationsState.fetchNotifications()
 })
+
+const displayedNotifications = computed(() => {
+  const notifArray = Array.isArray(notificationsState.notifications.value)
+    ? notificationsState.notifications.value
+    : []
+  
+  if (filterUnread.value) {
+    return notifArray.filter(n => !n.read)
+  }
+  return notifArray
+})
+
+const handleMarkAsRead = async (id) => {
+  await notificationsState.markAsRead(id)
+}
+
+const handleMarkAllAsRead = async () => {
+  await notificationsState.markAllAsRead()
+}
+
+const handleDeleteNotification = async (id) => {
+  if (confirm('Are you sure you want to remove this notification?')) {
+    await notificationsState.deleteNotification(id)
+  }
+}
 </script>

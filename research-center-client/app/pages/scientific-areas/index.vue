@@ -3,15 +3,15 @@
     <div class="bg-white shadow rounded-lg p-6">
       <div class="flex items-center justify-between mb-4">
         <div>
-          <h2 class="text-2xl font-semibold">Áreas Científicas</h2>
-          <p class="text-sm text-slate-500">Gerir áreas científicas (só ADMIN)</p>
+          <h2 class="text-2xl font-semibold">Scientific Areas</h2>
+          <p class="text-sm text-slate-500">Manage scientific areas (ADMIN only)</p>
         </div>
         <div>
-          <button @click="openCreate" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">+ Nova Área</button>
+          <button @click="openCreate" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">+ New Area</button>
         </div>
       </div>
 
-      <div v-if="loading" class="text-slate-600">A carregar áreas...</div>
+      <div v-if="loading" class="text-slate-600">Loading areas...</div>
 
       <div v-else>
         <ul class="space-y-2">
@@ -21,8 +21,8 @@
               <div class="text-sm text-slate-500">{{ a.description }}</div>
             </div>
             <div class="flex items-center gap-3">
-              <button @click="openEdit(a)" class="text-blue-600 hover:text-blue-900">Editar</button>
-              <button @click="removeArea(a)" class="text-red-600 hover:text-red-800">Remover</button>
+              <button @click="openEdit(a)" class="text-blue-600 hover:text-blue-900">Edit</button>
+              <button @click="removeArea(a)" class="text-red-600 hover:text-red-800">Remove</button>
             </div>
           </li>
         </ul>
@@ -36,24 +36,24 @@
       <div v-if="showForm" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-40">
         <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-medium">{{ editingId ? 'Editar Área' : 'Criar Área' }}</h3>
-            <button @click="closeForm" class="text-gray-500 hover:text-gray-700">Fechar</button>
+            <h3 class="text-lg font-medium">{{ editingId ? 'Edit Area' : 'Create Area' }}</h3>
+            <button @click="closeForm" class="text-gray-500 hover:text-gray-700">Close</button>
           </div>
 
           <div class="grid grid-cols-1 gap-3">
             <label>
-              <div class="text-sm text-slate-600">Nome</div>
+              <div class="text-sm text-slate-600">Name</div>
               <input v-model="form.name" class="w-full border rounded px-3 py-2" />
             </label>
             <label>
-              <div class="text-sm text-slate-600">Descrição</div>
+              <div class="text-sm text-slate-600">Description</div>
               <textarea v-model="form.description" class="w-full border rounded px-3 py-2" rows="3"></textarea>
             </label>
           </div>
 
           <div class="mt-4 flex justify-end gap-2">
-            <button @click="closeForm" class="px-3 py-2 border rounded">Cancelar</button>
-            <button @click="saveArea" class="bg-blue-600 text-white px-3 py-2 rounded">Guardar</button>
+            <button @click="closeForm" class="px-3 py-2 border rounded">Cancel</button>
+            <button @click="saveArea" class="bg-blue-600 text-white px-3 py-2 rounded">Save</button>
           </div>
         </div>
       </div>
@@ -80,7 +80,7 @@ const load = async () => {
   try {
     const resp = await api.get('/scientific-areas')
     areas.value = resp.data || []
-  } catch (e) { console.error(e); error.value = e?.response?.data?.message || 'Erro ao carregar áreas' }
+  } catch (e) { console.error(e); error.value = e?.response?.data?.message || 'Error loading areas' }
   finally { loading.value = false }
 }
 
@@ -98,12 +98,12 @@ const saveArea = async () => {
     }
     await load()
     closeForm()
-  } catch (e) { console.error(e); error.value = e?.response?.data?.message || 'Erro ao guardar área' }
+  } catch (e) { console.error(e); error.value = e?.response?.data?.message || 'Error saving area' }
 }
 
 const removeArea = async (a) => {
-  if (!confirm(`Remover área ${a.name}?`)) return
-  try { await api.delete(`/scientific-areas/${a.id}`); await load() } catch (e) { console.error(e); alert(e?.response?.data?.message || 'Erro ao remover área') }
+  if (!confirm(`Remove area ${a.name}?`)) return
+  try { await api.delete(`/scientific-areas/${a.id}`); await load() } catch (e) { console.error(e); alert(e?.response?.data?.message || 'Error removing area') }
 }
 
 onMounted(() => {

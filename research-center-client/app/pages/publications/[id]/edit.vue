@@ -5,10 +5,10 @@
         <div class="flex items-center justify-between gap-4">
           <div>
             <h1 class="text-2xl font-semibold text-slate-800">
-              Editar Publicação
+              Edit Publication
             </h1>
             <div class="text-sm text-slate-500">
-              Atualize os metadados da publicação
+              Update the metadata of the publication
             </div>
           </div>
           <div class="flex items-center gap-3">
@@ -31,7 +31,7 @@
                   d="M6 18L18 6M6 6l12 12"
                 />
               </svg>
-              Cancelar
+              Cancel
             </button>
             <button
               @click.prevent="save"
@@ -52,14 +52,14 @@
                   d="M5 13l4 4L19 7"
                 />
               </svg>
-              Guardar
+              Save
             </button>
           </div>
         </div>
       </div>
 
       <div class="p-6">
-        <div v-if="loading" class="text-slate-600">A carregar dados...</div>
+        <div v-if="loading" class="text-slate-600">Loading data...</div>
 
         <form
           v-else
@@ -69,22 +69,22 @@
           <div class="lg:col-span-2 space-y-4">
             <label class="block">
               <div class="text-sm font-medium text-slate-600 mb-1">
-                Título <span class="text-red-500">*</span>
+                Title <span class="text-red-500">*</span>
               </div>
               <input
                 v-model="form.title"
-                placeholder="Título da publicação"
+                placeholder="Title"
                 class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-200"
               />
             </label>
 
             <label class="block">
               <div class="text-sm font-medium text-slate-600 mb-1">
-                Resumo / Abstract
+                Abstract
               </div>
               <textarea
                 v-model="form.abstract"
-                placeholder="Resumo curto"
+                placeholder="Short abstract"
                 class="w-full border rounded px-3 py-2 focus:ring-2 focus:ring-blue-200"
                 rows="8"
               ></textarea>
@@ -93,9 +93,9 @@
             <label class="block">
               <div class="text-sm font-medium text-slate-600 mb-1 flex items-center justify-between">
                 <div>
-                  Resumo Gerado por IA
+                  AI Generated Summary
                   <span class="text-xs text-slate-400"
-                    >(opcional - pode editar/corrigir)</span
+                    >(optional - edit/correct if needed)</span
                   >
                 </div>
                 <button
@@ -125,12 +125,12 @@
                       d="M4 12a8 8 0 018-8v8H4z"
                     ></path>
                   </svg>
-                  <span>{{ isGeneratingSummary ? "A gerar..." : "Gerar Resumo com IA" }}</span>
+                  <span>{{ isGeneratingSummary ? "Generating..." : "Generate AI Summary" }}</span>
                 </button>
               </div>
               <textarea
                 v-model="form.aiGeneratedSummary"
-                placeholder="Resumo gerado automaticamente por IA"
+                placeholder="Automatically generated AI summary"
                 class="w-full border rounded px-3 py-2 bg-blue-50 focus:ring-2 focus:ring-blue-200"
                 :rows="form.aiGeneratedSummary && form.aiGeneratedSummary.length > 200 ? 8 : 5"
               ></textarea>
@@ -139,7 +139,7 @@
 
             <div class="flex items-center gap-3 text-sm text-slate-500">
               <div>
-                Última atualização:
+                Last updated:
                 <strong class="text-slate-700">{{
                   pub.updatedAt ? new Date(pub.updatedAt).toLocaleString() : "—"
                 }}</strong>
@@ -149,7 +149,7 @@
 
           <aside class="bg-slate-50 p-4 rounded lg:col-span-1">
             <div class="mb-3">
-              <div class="text-sm font-medium text-slate-600 mb-1">Autores</div>
+              <div class="text-sm font-medium text-slate-600 mb-1">Authors</div>
               <div class="flex flex-wrap gap-2 mb-2">
                 <span
                   v-for="(a, i) in form.authors"
@@ -170,7 +170,7 @@
                 v-model="authorQuery"
                 @input="lookupAuthors"
                 @keydown.enter.prevent="addRawAuthor"
-                placeholder="Procurar autores ou adicionar novo..."
+                placeholder="Search authors or add new..."
                 class="w-full border rounded px-3 py-2"
               />
               <ul
@@ -196,7 +196,7 @@
 
             <div class="grid grid-cols-1 gap-3">
               <label>
-                <div class="text-sm text-slate-600 mb-1">Ano</div>
+                <div class="text-sm text-slate-600 mb-1">Year</div>
                 <input
                   v-model.number="form.year"
                   type="number"
@@ -205,7 +205,7 @@
               </label>
 
               <label>
-                <div class="text-sm text-slate-600 mb-1">Editora</div>
+                <div class="text-sm text-slate-600 mb-1">Publisher</div>
                 <input
                   v-model="form.publisher"
                   class="w-full border rounded px-3 py-2"
@@ -229,7 +229,7 @@
                     class="form-checkbox h-4 w-4 text-blue-600 rounded"
                   />
                   <span class="text-sm font-medium text-slate-800"
-                    >Publicação Visível</span
+                    >Visible</span
                   >
                 </label>
 
@@ -240,14 +240,14 @@
                     class="form-checkbox h-4 w-4 text-red-600 rounded"
                   />
                   <span class="text-sm font-medium text-slate-800"
-                    >Confidencial</span
+                    >Confidential</span
                   >
                 </label>
               </div>
             </div>
 
             <div class="mt-4 text-xs text-slate-500">
-              Campos com <span class="text-red-500">*</span> são obrigatórios.
+              Fields with <span class="text-red-500">*</span> are required.
             </div>
           </aside>
         </form>
@@ -316,7 +316,7 @@ const load = async () => {
     form.value.confidential = p.confidential || false;
   } catch (e) {
     console.error(e);
-    error.value = e?.response?.data?.message || "Erro ao carregar publicação";
+    error.value = e?.response?.data?.message || "Error loading publication";
   } finally {
     loading.value = false;
   }
@@ -357,12 +357,12 @@ const generateAISummary = async () => {
   
   // Validate that we have title and abstract
   if (!form.value.title || !form.value.title.trim()) {
-    aiError.value = "Por favor, preencha o título primeiro";
+    aiError.value = "Please fill in the title first";
     return;
   }
   
   if (!form.value.abstract || !form.value.abstract.trim()) {
-    aiError.value = "Por favor, preencha o resumo primeiro";
+    aiError.value = "Please fill in the abstract first";
     return;
   }
   
@@ -377,16 +377,16 @@ const generateAISummary = async () => {
     if (response.data && response.data.summary) {
       form.value.aiGeneratedSummary = response.data.summary;
     } else {
-      aiError.value = "Resposta inválida do servidor";
+      aiError.value = "Invalid server response";
     }
   } catch (e) {
     console.error("Error generating AI summary:", e);
     if (e?.response?.data?.message) {
       aiError.value = e.response.data.message;
     } else if (e?.response?.status === 503) {
-      aiError.value = "Serviço de IA não disponível. Certifique-se de que o Ollama está a correr.";
+      aiError.value = "AI service unavailable. Make sure Ollama is running.";
     } else {
-      aiError.value = "Erro ao gerar resumo. Tente novamente.";
+      aiError.value = "Error generating summary. Please try again.";
     }
   } finally {
     isGeneratingSummary.value = false;
@@ -409,7 +409,7 @@ const save = async () => {
     await api.put(`/publications/${id}`, payload);
     navigateTo(`/publications/${id}`);
   } catch (e) {
-    error.value = e?.response?.data?.message || "Erro ao guardar publicação";
+    error.value = e?.response?.data?.message || "Error saving publication";
   } finally {
     saving.value = false;
   }

@@ -49,6 +49,9 @@ public class ConfigBean {
     @EJB
     private DocumentBean documentBean;
     
+    @EJB
+    private NotificationBean notificationBean;
+    
     @PostConstruct
     public void populateDB() {
         logger.info("Database population started...");
@@ -133,7 +136,7 @@ public class ConfigBean {
                     // Activity Log for Upload
                     try {
                         activityLogBean.create(uploader, "UPLOAD_PUBLICATION", "PUBLICATION", pub.getId(), 
-                            "Upload da publicação '" + title + "'");
+                            "Upload of publication '" + title + "'");
                     } catch (Exception ignored) {}
                     
                     // Set Random Views (0 - 1200)
@@ -163,7 +166,7 @@ public class ConfigBean {
                         var author = collaborators.get(rand.nextInt(collaborators.size()));
                         try {
                             commentBean.create("Comment " + c + " on " + title + ". Interesting work!", author.getId(), pub.getId());
-                            activityLogBean.create(author, "COMMENT", "PUBLICATION", pub.getId(), "Comentou na publicação '" + title + "'");
+                            activityLogBean.create(author, "COMMENT", "PUBLICATION", pub.getId(), "Commented on publication '" + title + "'");
                         } catch(Exception ignored){}
                     }
                     
@@ -173,7 +176,7 @@ public class ConfigBean {
                         var author = collaborators.get(rand.nextInt(collaborators.size()));
                         try {
                             ratingBean.create(1 + rand.nextInt(5), author.getId(), pub.getId());
-                            activityLogBean.create(author, "RATE", "PUBLICATION", pub.getId(), "Avaliou a publicação '" + title + "'");
+                            activityLogBean.create(author, "RATE", "PUBLICATION", pub.getId(), "Rated publication '" + title + "'");
                         } catch (Exception ignored){}
                     }
                     
@@ -181,6 +184,70 @@ public class ConfigBean {
                    // Ignore specific errors (duplicates etc)
                 }
             }
+            
+            // 5. Create Random Notifications for each collaborator
+            logger.info("Seeding notifications for collaborators...");
+            String[] notificationTypes = {"NEW_PUBLICATION_WITH_TAG", "NEW_COMMENT_ON_TAG", "NEW_RATING", "SYSTEM"};
+            String[] notificationTitles = {
+                "New Subscription Publication",
+                "New Comment Notification",
+                "New Rating Received",
+                "Welcome to Research Center!",
+                "System Update",
+                "New Feature Available",
+                "Featured Publication",
+                "Collaboration Invite"
+            };
+            String[] notificationMessages = {
+                "A new publication has been added with a tag you subscribed to.",
+                "A new comment was added to a publication with a tag you subscribed to.",
+                "Your publication received a new rating.",
+                "Thanks for joining our platform. Explore publications and subscribe to tags of interest.",
+                "The system has been updated with new features.",
+                "You can now export publications to PDF format.",
+                "A publication that might interest you was featured by the community.",
+                "You have been invited to collaborate on a new research project."
+            };
+            
+            for (Collaborator collaborator : collaborators) {
+                // Create 3-8 random notifications per user
+                int numNotifications = 3 + rand.nextInt(6);
+                for (int n = 0; n < numNotifications; n++) {
+                    try {
+                        String type = notificationTypes[rand.nextInt(notificationTypes.length)];
+                        String title = notificationTitles[rand.nextInt(notificationTitles.length)];
+                        String message = notificationMessages[rand.nextInt(notificationMessages.length)];
+                        
+                        // Determine related entity based on type
+                        String relatedEntityType = "SYSTEM";
+                        Long relatedEntityId = null;
+                        
+                        if (type.equals("NEW_PUBLICATION_WITH_TAG") || type.equals("NEW_COMMENT_ON_TAG") || type.equals("NEW_RATING")) {
+                            relatedEntityType = "PUBLICATION";
+                            relatedEntityId = (long) (1 + rand.nextInt(50)); // Random publication ID
+                        }
+                        
+                        // Create notification
+                        var notification = notificationBean.create(
+                            collaborator.getId(),
+                            type,
+                            title,
+                            message,
+                            relatedEntityType,
+                            relatedEntityId
+                        );
+                        
+                        // Mark some as read (60% chance)
+                        if (rand.nextInt(100) < 60) {
+                            notificationBean.markAsRead(notification.getId());
+                        }
+                    } catch (Exception e) {
+                        // Ignore errors for individual notifications
+                    }
+                }
+            }
+            logger.info("Notification seeding completed.");
+            
             logger.info("Massive seeding completed.");
             
         } catch (Exception e) {

@@ -1,13 +1,13 @@
 <template>
   <div class="container mx-auto px-4 py-6">
     <div class="bg-white shadow rounded-lg p-6 max-w-3xl mx-auto">
-      <h2 class="text-2xl font-bold mb-4">Submeter Nova Publicação</h2>
+      <h2 class="text-2xl font-bold mb-4">Submit New Publication</h2>
       <div class="space-y-4">
         <label class="block">
-          <div class="text-sm text-slate-600 mb-1">Título</div>
+          <div class="text-sm text-slate-600 mb-1">Title</div>
           <input
             v-model="title"
-            placeholder="Título"
+            placeholder="Title"
             class="w-full border rounded px-3 py-2"
           />
           <div v-if="validationErrors.title" class="text-red-600 text-sm mt-1">
@@ -16,7 +16,7 @@
         </label>
 
         <div class="block">
-          <div class="text-sm text-slate-600 mb-1">Autores</div>
+          <div class="text-sm text-slate-600 mb-1">Authors</div>
           <div class="flex flex-wrap gap-2 mb-2">
             <span
               v-for="(a, i) in selectedAuthors"
@@ -37,7 +37,7 @@
             v-model="authorQuery"
             @input="lookupAuthors"
             @keydown.enter.prevent="addRawAuthor"
-            placeholder="Procurar autores ou adicionar novo..."
+            placeholder="Search authors or add new..."
             class="w-full border rounded px-3 py-2"
           />
           <ul
@@ -63,7 +63,7 @@
 
         <div class="flex gap-4 items-center">
           <label class="flex-1">
-            <div class="text-sm text-slate-600 mb-1">Ano</div>
+            <div class="text-sm text-slate-600 mb-1">Year</div>
             <input
               v-model="year"
               type="number"
@@ -71,7 +71,7 @@
             />
           </label>
           <label class="flex-1">
-            <div class="text-sm text-slate-600 mb-1">Ficheiro</div>
+            <div class="text-sm text-slate-600 mb-1">File</div>
             <div class="flex items-center gap-3">
               <input type="file" @change="onFileChange" class="w-full" />
               <div v-if="file && file.name" class="text-sm text-slate-600">
@@ -83,9 +83,9 @@
 
         <div class="flex gap-4 items-center">
           <label class="flex-1">
-            <div class="text-sm text-slate-600 mb-1">Tipo</div>
+            <div class="text-sm text-slate-600 mb-1">Type</div>
             <select v-model="type" class="w-full border rounded px-3 py-2">
-              <option value="">-- Selecionar --</option>
+              <option value="">-- Select --</option>
               <option
                 v-for="t in publicationTypes"
                 :key="t.code"
@@ -99,12 +99,12 @@
             </div>
           </label>
           <label class="flex-1">
-            <div class="text-sm text-slate-600 mb-1">Área Científica</div>
+            <div class="text-sm text-slate-600 mb-1">Scientific Area</div>
             <select
               v-model="areaScientific"
               class="w-full border rounded px-3 py-2"
             >
-              <option value="">-- Selecionar --</option>
+              <option value="">-- Select --</option>
               <option v-for="a in scientificAreas" :key="a.id" :value="a.name">
                 {{ a.name }}
               </option>
@@ -113,8 +113,7 @@
               v-if="scientificAreas.length === 0"
               class="text-yellow-600 text-sm mt-1"
             >
-              Nenhuma área científica disponível — peça a um administrador para
-              criar.
+              No scientific areas available — ask an administrator to create one.
             </div>
             <div
               v-if="validationErrors.areaScientific"
@@ -126,10 +125,10 @@
         </div>
 
         <label class="block">
-          <div class="text-sm text-slate-600 mb-1">Resumo</div>
+          <div class="text-sm text-slate-600 mb-1">Abstract</div>
           <textarea
             v-model="abstract"
-            placeholder="Resumo"
+            placeholder="Abstract"
             class="w-full border rounded px-3 py-2"
             rows="6"
           ></textarea>
@@ -140,10 +139,9 @@
             class="text-sm text-slate-600 mb-1 flex items-center justify-between"
           >
             <div>
-              Resumo Gerado por IA
+              AI Generated Summary
               <span class="text-xs text-slate-400"
-                >(opcional - será gerado automaticamente ou pode inserir
-                manualmente)</span
+                >(optional - will be generated automatically or you can enter manually)</span
               >
             </div>
             <button
@@ -174,13 +172,13 @@
                 ></path>
               </svg>
               <span>{{
-                isGeneratingSummary ? "A gerar..." : "Gerar Resumo com IA"
+                isGeneratingSummary ? "Generating..." : "Generate AI Summary"
               }}</span>
             </button>
           </div>
           <textarea
             v-model="aiGeneratedSummary"
-            placeholder="Resumo gerado automaticamente por IA (pode editar/corrigir se necessário)"
+            placeholder="Automatically generated AI summary (can be edited/corrected if necessary)"
             class="w-full border rounded px-3 py-2 bg-blue-50"
             :rows="aiGeneratedSummary && aiGeneratedSummary.length > 200 ? 8 : 4"
           ></textarea>
@@ -193,7 +191,7 @@
           <div class="text-sm text-slate-600 mb-1">
             Tags
             <span class="text-xs text-slate-400"
-              >(opcional - selecione uma ou mais)</span
+              >(optional - select one or more)</span
             >
           </div>
           <div class="flex flex-wrap gap-2 mb-2">
@@ -217,7 +215,7 @@
             @change="addTag"
             class="w-full border rounded px-3 py-2"
           >
-            <option value="">-- Selecionar tag --</option>
+            <option value="">-- Select tag --</option>
             <option v-for="tag in availableTags" :key="tag.id" :value="tag.id">
               {{ tag.name }}
             </option>
@@ -226,7 +224,7 @@
             v-if="availableTags.length === 0"
             class="text-yellow-600 text-sm mt-1"
           >
-            Nenhuma tag disponível — peça a um responsável para criar.
+            No tags available — ask a manager to create one.
           </div>
         </label>
 
@@ -240,9 +238,9 @@
               class="form-checkbox h-5 w-5 text-blue-600 rounded"
             />
             <div>
-              <div class="font-medium text-slate-800">Publicação Visível</div>
+              <div class="font-medium text-slate-800">Visible</div>
               <div class="text-xs text-slate-500">
-                Se desmarcado, a publicação ficará oculta para o público
+                If unchecked, the publication will be hidden from the public
               </div>
             </div>
           </label>
@@ -254,9 +252,9 @@
               class="form-checkbox h-5 w-5 text-red-600 rounded"
             />
             <div>
-              <div class="font-medium text-slate-800">Confidencial</div>
+              <div class="font-medium text-slate-800">Confidential</div>
               <div class="text-xs text-slate-500">
-                Apenas administradores e responsáveis poderão ver
+                Only administrators and managers will be able to see
               </div>
             </div>
           </label>
@@ -289,9 +287,9 @@
                 d="M4 12a8 8 0 018-8v8H4z"
               ></path>
             </svg>
-            <span>{{ isSubmitting ? "A submeter..." : "Submeter" }}</span>
+            <span>{{ isSubmitting ? "Submitting..." : "Submit" }}</span>
           </button>
-          <NuxtLink to="/" class="px-4 py-2 border rounded">Cancelar</NuxtLink>
+          <NuxtLink to="/" class="px-4 py-2 border rounded">Cancel</NuxtLink>
         </div>
 
         <div v-if="error" class="text-red-600">{{ error }}</div>
@@ -354,7 +352,7 @@ const onFileChange = (e) => {
     const hasValidType = validTypes.includes(fileType);
 
     if (!hasValidExtension && !hasValidType) {
-      fileError.value = "Apenas ficheiros PDF ou ZIP são permitidos";
+      fileError.value = "Only PDF or ZIP files are allowed";
       file.value = null;
     }
   }
@@ -425,12 +423,12 @@ const generateAISummary = async () => {
 
   // Validate that we have title and abstract
   if (!title.value || !title.value.trim()) {
-    aiError.value = "Por favor, preencha o título primeiro";
+    aiError.value = "Please fill in the title first";
     return;
   }
 
   if (!abstract.value || !abstract.value.trim()) {
-    aiError.value = "Por favor, preencha o resumo primeiro";
+    aiError.value = "Please fill in the abstract first";
     return;
   }
 
@@ -445,7 +443,7 @@ const generateAISummary = async () => {
     if (response.data && response.data.summary) {
       aiGeneratedSummary.value = response.data.summary;
     } else {
-      aiError.value = "Resposta inválida do servidor";
+      aiError.value = "Invalid server response";
     }
   } catch (e) {
     console.error("Error generating AI summary:", e);
@@ -453,9 +451,9 @@ const generateAISummary = async () => {
       aiError.value = e.response.data.message;
     } else if (e?.response?.status === 503) {
       aiError.value =
-        "Serviço de IA não disponível. Certifique-se de que o Ollama está a correr.";
+        "AI service unavailable. Make sure Ollama is running.";
     } else {
-      aiError.value = "Erro ao gerar resumo. Tente novamente.";
+      aiError.value = "Error generating summary. Please try again.";
     }
   } finally {
     isGeneratingSummary.value = false;
@@ -469,18 +467,18 @@ const submit = async () => {
 
   // Client-side validation
   if (!title.value || !title.value.trim())
-    validationErrors.value.title = "Título é obrigatório";
-  if (!type.value) validationErrors.value.type = "Tipo é obrigatório";
+    validationErrors.value.title = "Title is required";
+  if (!type.value) validationErrors.value.type = "Type is required";
   if (!areaScientific.value)
-    validationErrors.value.areaScientific = "Área científica é obrigatória";
-  if (!year.value) validationErrors.value.year = "Ano é obrigatório";
+    validationErrors.value.areaScientific = "Scientific area is required";
+  if (!year.value) validationErrors.value.year = "Year is required";
   if (scientificAreas.value.length === 0) {
     error.value =
-      "Não existem áreas científicas definidas no sistema. Contacte um administrador.";
+      "No scientific areas defined in the system. Contact an administrator.";
     return;
   }
   if (Object.keys(validationErrors.value).length > 0) {
-    error.value = "Campos obrigatórios em falta";
+    error.value = "Missing required fields";
     return;
   }
 
@@ -528,10 +526,10 @@ const submit = async () => {
         error.value =
           typeof d === "string" ? d : d?.message || JSON.stringify(d);
       } catch (ex) {
-        error.value = "Erro ao submeter (400). Veja o console para detalhes.";
+        error.value = "Error submitting (400). See console for details.";
       }
     } else {
-      error.value = "Erro ao submeter (sem resposta do servidor)";
+      error.value = "Error submitting (no server response)";
     }
   } finally {
     isSubmitting.value = false;

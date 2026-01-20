@@ -1,7 +1,7 @@
 <template>
   <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
     <div class="sm:mx-auto sm:w-full sm:max-w-sm">
-      <h2 class="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">Entrar na conta</h2>
+      <h2 class="mt-10 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">Sign in to your account</h2>
     </div>
 
     <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
@@ -17,7 +17,7 @@
           <div class="flex items-center justify-between">
             <label for="password" class="block text-sm font-medium leading-6 text-gray-900">Password</label>
             <div class="text-sm">
-              <NuxtLink to="/auth/forgot-password" class="font-semibold text-blue-600 hover:text-blue-500">Esqueceu a password?</NuxtLink>
+              <NuxtLink to="/auth/forgot-password" class="font-semibold text-blue-600 hover:text-blue-500">Forgot password?</NuxtLink>
             </div>
           </div>
           <div class="mt-2">
@@ -27,7 +27,7 @@
 
         <div>
           <button type="submit" :disabled="loading" class="flex w-full justify-center rounded-md bg-blue-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 disabled:opacity-50">
-            {{ loading ? 'A entrar...' : 'Entrar' }}
+            {{ loading ? 'Signing in...' : 'Sign in' }}
           </button>
         </div>
         
@@ -85,7 +85,7 @@ const handleLogin = async () => {
         }
     } catch (e) {
         console.error(e)
-        error.value = "Login falhou. Verifique as credenciais."
+        error.value = "Login failed. Check your credentials."
     } finally {
         loading.value = false
     }

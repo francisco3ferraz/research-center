@@ -3,31 +3,31 @@
     <div class="bg-white shadow rounded-lg p-6">
       <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h2 class="text-2xl font-semibold">Gestão de Utilizadores</h2>
-          <p class="text-sm text-slate-500 mt-1">Ver, criar e gerir contas de utilizador</p>
+          <h2 class="text-2xl font-semibold">User Management</h2>
+          <p class="text-sm text-slate-500 mt-1">View, create and manage user accounts</p>
         </div>
 
         <div class="flex items-center gap-3">
           <div class="relative">
-            <input v-model="search" placeholder="Procurar por nome, username ou email" class="border rounded-md pl-10 pr-4 py-2 w-64 focus:ring-2 focus:ring-blue-200" />
+            <input v-model="search" placeholder="Search by name, username or email" class="border rounded-md pl-10 pr-4 py-2 w-64 focus:ring-2 focus:ring-blue-200" />
             <svg class="w-4 h-4 absolute left-3 top-2.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
           </div>
-          <button @click="openCreate" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">+ Novo Utilizador</button>
+          <button @click="openCreate" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">+ New User</button>
         </div>
       </div>
 
-      <div v-if="loading" class="text-slate-600">A carregar utilizadores...</div>
+      <div v-if="loading" class="text-slate-600">Loading users...</div>
 
       <div v-else>
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Papel</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th class="px-6 py-3"></th>
               </tr>
             </thead>
@@ -40,13 +40,13 @@
                   <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">{{ u.role || 'N/A' }}</span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-sm">
-                  <span :class="u.active ? 'text-green-700' : 'text-red-600'">{{ u.active ? 'Ativo' : 'Inativo' }}</span>
+                  <span :class="u.active ? 'text-green-700' : 'text-red-600'">{{ u.active ? 'Active' : 'Inactive' }}</span>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button @click="openEdit(u)" title="Editar" class="text-blue-600 hover:text-blue-900 mr-3">Editar</button>
-                  <NuxtLink :to="`/users/${u.id}/activity`" class="text-purple-600 hover:text-purple-900 mr-3" title="Histórico">Histórico</NuxtLink>
-                  <button @click="toggleActive(u)" title="Ativar/Desativar" class="text-gray-600 hover:text-gray-900 mr-3">{{ u.active ? 'Desativar' : 'Ativar' }}</button>
-                  <button @click="removeUser(u)" title="Remover" class="text-red-600 hover:text-red-900">Remover</button>
+                  <button @click="openEdit(u)" title="Edit" class="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
+                  <NuxtLink :to="`/users/${u.id}/activity`" class="text-purple-600 hover:text-purple-900 mr-3" title="History">History</NuxtLink>
+                  <button @click="toggleActive(u)" title="Activate/Deactivate" class="text-gray-600 hover:text-gray-900 mr-3">{{ u.active ? 'Deactivate' : 'Activate' }}</button>
+                  <button @click="removeUser(u)" title="Remove" class="text-red-600 hover:text-red-900">Remove</button>
                 </td>
               </tr>
             </tbody>
@@ -62,13 +62,13 @@
       <div v-if="showForm" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-40">
         <div class="bg-white rounded-lg shadow-lg w-full max-w-xl p-6">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-medium">{{ editingId ? 'Editar Utilizador' : 'Criar Utilizador' }}</h3>
-            <button @click="closeForm" class="text-gray-500 hover:text-gray-700">Fechar</button>
+            <h3 class="text-lg font-medium">{{ editingId ? 'Edit User' : 'Create User' }}</h3>
+            <button @click="closeForm" class="text-gray-500 hover:text-gray-700">Close</button>
           </div>
 
           <div class="grid grid-cols-1 gap-3">
             <label>
-              <div class="text-sm text-slate-600">Nome</div>
+              <div class="text-sm text-slate-600">Name</div>
               <input v-model="form.name" class="w-full border rounded px-3 py-2" />
             </label>
             <label>
@@ -80,7 +80,7 @@
               <input v-model="form.email" class="w-full border rounded px-3 py-2" />
             </label>
             <label>
-              <div class="text-sm text-slate-600">Papel</div>
+              <div class="text-sm text-slate-600">Role</div>
               <select v-model="form.role" class="w-full border rounded px-3 py-2">
                 <option value="COLABORADOR">COLABORADOR</option>
                 <option value="RESPONSAVEL">RESPONSAVEL</option>
@@ -94,8 +94,8 @@
           </div>
 
           <div class="mt-4 flex justify-end gap-2">
-            <button @click="closeForm" class="px-3 py-2 border rounded">Cancelar</button>
-            <button @click="saveUser" class="bg-blue-600 text-white px-3 py-2 rounded">Guardar</button>
+            <button @click="closeForm" class="px-3 py-2 border rounded">Cancel</button>
+            <button @click="saveUser" class="bg-blue-600 text-white px-3 py-2 rounded">Save</button>
           </div>
         </div>
       </div>
@@ -135,7 +135,7 @@ const loadUsers = async () => {
     users.value = resp.data || []
   } catch (e) {
     console.error(e)
-    error.value = e?.response?.data?.message || 'Erro ao carregar utilizadores'
+    error.value = e?.response?.data?.message || 'Error loading users'
   } finally { loading.value = false }
 }
 
@@ -175,23 +175,23 @@ const saveUser = async () => {
     closeForm()
   } catch (e) {
     console.error(e)
-    error.value = e?.response?.data?.message || 'Erro ao guardar utilizador'
+    error.value = e?.response?.data?.message || 'Error saving user'
   }
 }
 
 const removeUser = async (u) => {
-  if (!confirm(`Remover utilizador ${u.name}?`)) return
+  if (!confirm(`Remove user ${u.name}?`)) return
   try {
     await api.delete(`/users/${u.id}`)
     await loadUsers()
-  } catch (e) { console.error(e); error.value = e?.response?.data?.message || 'Erro ao remover utilizador' }
+  } catch (e) { console.error(e); error.value = e?.response?.data?.message || 'Error removing user' }
 }
 
 const toggleActive = async (u) => {
   try {
     await api.patch(`/users/${u.id}/status`, { active: !u.active })
     await loadUsers()
-  } catch (e) { console.error(e); error.value = e?.response?.data?.message || 'Erro ao alterar estado' }
+  } catch (e) { console.error(e); error.value = e?.response?.data?.message || 'Error changing status' }
 }
 
 onMounted(() => {

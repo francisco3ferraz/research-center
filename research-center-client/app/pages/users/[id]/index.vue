@@ -1,12 +1,12 @@
 <template>
   <div class="max-w-2xl mx-auto">
-    <div v-if="pending" class="text-center py-10">Carregando...</div>
-    <div v-else-if="errorLoad" class="text-center py-10 text-red-500">Erro ao carregar detalhes: {{ errorLoad }}</div>
+    <div v-if="pending" class="text-center py-10">Loading...</div>
+    <div v-else-if="errorLoad" class="text-center py-10 text-red-500">Error loading details: {{ errorLoad }}</div>
     
     <div v-else>
       <div class="md:flex md:items-center md:justify-between mb-6">
         <div class="flex-1 min-w-0">
-          <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">Detalhes do Utilizador: {{ user?.username }}</h2>
+          <h2 class="text-2xl font-bold leading-7 text-gray-900 sm:text-3xl sm:truncate">User Details: {{ user?.username }}</h2>
         </div>
       </div>
 
@@ -22,7 +22,7 @@
             </div>
 
             <div>
-              <label for="name" class="block text-sm font-medium text-gray-700">Nome</label>
+              <label for="name" class="block text-sm font-medium text-gray-700">Name</label>
               <div class="mt-1">
                 <input type="text" v-model="form.name" id="name" required class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md px-3 py-2 border">
               </div>
@@ -39,19 +39,19 @@
               <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
               <div class="mt-1">
                 <select id="role" v-model="form.role" class="shadow-sm focus:ring-blue-500 focus:border-blue-500 block w-full sm:text-sm border-gray-300 rounded-md px-3 py-2 border">
-                  <option value="COLABORADOR">Colaborador</option>
-                  <option value="RESPONSAVEL">Responsável</option>
-                  <option value="ADMINISTRADOR">Administrador</option>
+                  <option value="COLABORADOR">Collaborator</option>
+                  <option value="RESPONSAVEL">Manager</option>
+                  <option value="ADMINISTRADOR">Administrator</option>
                 </select>
               </div>
             </div>
 
             <div class="flex justify-end pt-4 border-t">
               <NuxtLink to="/users" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mr-3">
-                Voltar
+                Back
               </NuxtLink>
               <button type="submit" :disabled="saving" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                {{ saving ? 'Guardando...' : 'Guardar Alterações' }}
+                {{ saving ? 'Saving...' : 'Save Changes' }}
               </button>
             </div>
             <div v-if="errorSave" class="text-red-500 text-sm mt-2">{{ errorSave }}</div>
@@ -103,7 +103,7 @@ onMounted(async () => {
         form.email = data.email
         form.role = data.role
     } catch (e) {
-        errorLoad.value = e.data?.message || e.message || 'Erro ao carregar utilizador'
+        errorLoad.value = e.data?.message || e.message || 'Error loading user'
     } finally {
         pending.value = false
     }
@@ -120,10 +120,10 @@ const updateUser = async () => {
                 Authorization: `Bearer ${auth.token.value}`
             }
         })
-        alert('Utilizador atualizado com sucesso!')
+        alert('User updated successfully!')
         router.push('/users')
     } catch (e) {
-        errorSave.value = "Erro ao atualizar: " + (e.data?.message || e.message)
+        errorSave.value = "Error updating: " + (e.data?.message || e.message)
     } finally {
         saving.value = false
     }
