@@ -177,7 +177,7 @@
                 <div class="flex justify-between items-start">
                   <div>
                     <div class="text-sm font-medium">
-                      {{ h.actionType }} por {{ h.userName }}
+                      {{ h.actionType }} por {{ h.editedBy?.name || h.editedBy?.username || 'Sistema' }}
                     </div>
                     <div class="text-xs text-slate-500">
                       {{ h.description }}
