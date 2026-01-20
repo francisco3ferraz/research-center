@@ -1,5 +1,6 @@
 package pt.ipleiria.dei.ei.estg.researchcenter.exceptions.mappers;
 
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ext.ExceptionMapper;
@@ -14,6 +15,10 @@ public class GenericExceptionMapper implements ExceptionMapper<Throwable> {
 
     @Override
     public Response toResponse(Throwable exception) {
+        if (exception instanceof WebApplicationException) {
+            return ((WebApplicationException) exception).getResponse();
+        }
+
         LOGGER.log(Level.SEVERE, "Unhandled exception in JAX-RS request", exception);
         Map<String, String> body = Map.of(
                 "error", "Internal Server Error",
