@@ -41,19 +41,38 @@
             <h3 class="text-sm font-semibold text-blue-900 mb-2">
               📝 Resumo Gerado por IA
             </h3>
-            <div class="text-sm text-slate-700">
-              {{ pub.aiGeneratedSummary }}
+            <div class="text-sm text-slate-700 relative">
+              <div class="whitespace-pre-wrap">
+                {{ isSummaryExpanded ? pub.aiGeneratedSummary : (pub.aiGeneratedSummary.length > 100 ? pub.aiGeneratedSummary.substring(0, 100) + '...' : pub.aiGeneratedSummary) }}
+              </div>
+              <button 
+                v-if="pub.aiGeneratedSummary.length > 100" 
+                @click="isSummaryExpanded = !isSummaryExpanded"
+                class="mt-2 text-xs font-semibold text-blue-700 hover:text-blue-900 focus:outline-none flex items-center gap-1"
+              >
+                {{ isSummaryExpanded ? 'Minimizar' : 'Ler mais' }}
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" :class="{ 'rotate-180': isSummaryExpanded }">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
             </div>
           </div>
 
           <div class="mt-4 flex gap-2 items-center">
             <button
-              v-if="pub.documentId"
+              v-if="pub.documentId && !pdfUrl"
               @click="previewPdf"
               :disabled="isFetchingPdf"
               class="px-3 py-1 bg-blue-600 text-white rounded"
             >
-              Ver PDF
+              Visualizar PDF
+            </button>
+            <button
+              v-if="pub.documentId && pdfUrl"
+              @click="pdfUrl = null"
+              class="px-3 py-1 bg-red-600 text-white rounded"
+            >
+              Fechar PDF
             </button>
             <button
               v-if="pub.documentId"
@@ -265,7 +284,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, onBeforeUnmount } from "vue";
+import { ref, onMounted, computed, onBeforeUnmount, watch } from "vue";
 const route = useRoute();
 const id = route.params.id;
 const api = useApi();
@@ -281,6 +300,7 @@ const isFetchingPdf = ref(false);
 const subscribedTagIds = ref(new Set());
 const history = ref([]);
 const loadingHistory = ref(false);
+const isSummaryExpanded = ref(false);
 
 // Pagination state
 const pageSize = 10;
@@ -483,6 +503,12 @@ const goEdit = () => {
 onMounted(load);
 
 const isEditRoute = computed(() => (route.path || "").endsWith("/edit"));
+
+watch(isEditRoute, (isEdit) => {
+  if (!isEdit) {
+    load();
+  }
+});
 
 const canEdit = computed(() => {
   if (!auth.token.value || !auth.user.value) return false;

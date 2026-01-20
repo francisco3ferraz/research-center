@@ -15,50 +15,51 @@
           </div>
         </label>
 
-        <label class="block relative">
+        <div class="block">
           <div class="text-sm text-slate-600 mb-1">Autores</div>
-          <div class="flex gap-2 items-center flex-wrap">
-            <template v-for="(a, i) in selectedAuthors" :key="i">
-              <span
-                class="inline-flex items-center bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm"
+          <div class="flex flex-wrap gap-2 mb-2">
+            <span
+              v-for="(a, i) in selectedAuthors"
+              :key="i"
+              class="inline-flex items-center gap-2 bg-white border px-2 py-1 rounded-full text-sm"
+            >
+              <span class="text-slate-800">{{ a }}</span>
+              <button
+                type="button"
+                @click="removeAuthor(i)"
+                class="text-slate-400 hover:text-red-600"
               >
-                <span class="mr-2">{{ a }}</span>
-                <button
-                  @click.prevent="removeAuthor(i)"
-                  class="text-blue-600 hover:text-blue-900 text-xs font-bold"
-                >
-                  ×
-                </button>
-              </span>
-            </template>
+                ×
+              </button>
+            </span>
           </div>
           <input
             v-model="authorQuery"
-            @input="onAuthorInput"
-            @keydown.enter.prevent="addAuthorFromQuery"
-            placeholder="Procurar autores..."
-            class="w-full border rounded px-3 py-2 mt-2"
+            @input="lookupAuthors"
+            @keydown.enter.prevent="addRawAuthor"
+            placeholder="Procurar autores ou adicionar novo..."
+            class="w-full border rounded px-3 py-2"
           />
           <ul
-            v-if="showSuggestions"
-            class="absolute z-20 bg-white border rounded mt-1 w-full max-h-48 overflow-auto"
+            v-if="suggestions.length"
+            class="mt-2 bg-white border rounded shadow max-h-40 overflow-auto"
           >
             <li
-              v-for="u in suggestions"
-              :key="u.id"
-              @click="selectSuggestion(u)"
-              class="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+              v-for="s in suggestions"
+              :key="s.id"
+              class="px-3 py-2 hover:bg-gray-50 cursor-pointer flex justify-between"
+              @click="addAuthorFromSuggestion(s)"
             >
-              {{ u.name }}
-            </li>
-            <li
-              v-if="suggestions.length === 0"
-              class="px-3 py-2 text-sm text-slate-500"
-            >
-              Nenhum utilizador encontrado
+              <div>
+                <div class="font-medium text-slate-800">{{ s.name }}</div>
+                <div class="text-xs text-slate-500">
+                  {{ s.username || s.email }}
+                </div>
+              </div>
+              <div class="text-sm text-slate-400">+</div>
             </li>
           </ul>
-        </label>
+        </div>
 
         <div class="flex gap-4 items-center">
           <label class="flex-1">
@@ -310,8 +311,6 @@ const authors = ref("");
 const authorQuery = ref("");
 const suggestions = ref([]);
 const selectedAuthors = ref([]);
-const showSuggestions = ref(false);
-let authorDebounce = null;
 const year = ref(new Date().getFullYear());
 const abstract = ref("");
 const aiGeneratedSummary = ref("");
@@ -361,16 +360,15 @@ const onFileChange = (e) => {
   }
 };
 
-const fetchUsers = async (q) => {
+const lookupAuthors = async () => {
+  suggestions.value = [];
+  const q = authorQuery.value && authorQuery.value.trim();
+  if (!q) return;
   try {
-    // Use the public lookup endpoint which returns minimal user info (id + name)
-    const resp = await api.get("/users/lookup", { params: { q } });
+    const resp = await api.get(`/users/lookup?q=${encodeURIComponent(q)}`);
     suggestions.value = resp.data || [];
-    showSuggestions.value = true;
   } catch (e) {
-    console.error("Failed to fetch users", e);
-    suggestions.value = [];
-    showSuggestions.value = false;
+    console.error(e);
   }
 };
 
@@ -404,35 +402,22 @@ const removeTag = (tagId) => {
   selectedTags.value = selectedTags.value.filter((t) => t.id !== tagId);
 };
 
-const onAuthorInput = (e) => {
-  const v = authorQuery.value;
-  if (authorDebounce) clearTimeout(authorDebounce);
-  if (!v || v.trim().length < 1) {
-    suggestions.value = [];
-    showSuggestions.value = false;
-    return;
-  }
-  authorDebounce = setTimeout(() => fetchUsers(v.trim()), 300);
-};
-
-const selectSuggestion = (u) => {
-  const name = u.name || u.username;
-  if (!selectedAuthors.value.includes(name)) selectedAuthors.value.push(name);
+const addAuthorFromSuggestion = (s) => {
+  if (!selectedAuthors.value.includes(s.name)) selectedAuthors.value.push(s.name);
   authorQuery.value = "";
   suggestions.value = [];
-  showSuggestions.value = false;
 };
 
-const addAuthorFromQuery = () => {
+const removeAuthor = (i) => {
+  selectedAuthors.value.splice(i, 1);
+};
+
+const addRawAuthor = () => {
   const v = authorQuery.value && authorQuery.value.trim();
-  if (v && !selectedAuthors.value.includes(v)) selectedAuthors.value.push(v);
+  if (!v) return;
+  if (!selectedAuthors.value.includes(v)) selectedAuthors.value.push(v);
   authorQuery.value = "";
   suggestions.value = [];
-  showSuggestions.value = false;
-};
-
-const removeAuthor = (idx) => {
-  selectedAuthors.value.splice(idx, 1);
 };
 
 const generateAISummary = async () => {

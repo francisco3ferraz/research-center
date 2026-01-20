@@ -299,8 +299,8 @@ const changePassword = async () => {
       newPassword: pwd.value.newPassword,
       confirmPassword: pwd.value.confirmPassword,
     });
-    pwdMsg.value = "Senha alterada com sucesso.";
     clearPwd();
+    pwdMsg.value = "Senha alterada com sucesso.";
   } catch (e) {
     pwdError.value = e?.response?.data || "Erro ao alterar senha.";
   }

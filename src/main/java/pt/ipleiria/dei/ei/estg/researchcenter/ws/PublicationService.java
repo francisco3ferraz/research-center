@@ -715,9 +715,34 @@ public class PublicationService {
     @GET
     @Path("/{id}/file")
     @Produces({MediaType.APPLICATION_OCTET_STREAM})
-    @Authenticated
+    @PermitAll
     public Response downloadFile(@PathParam("id") Long id) throws Exception {
         var document = documentBean.findByPublication(id);
+        var pub = publicationBean.find(id);
+        
+        // Security Check
+        User user = getUserFromToken();
+        if (user == null) {
+            // Guest: Must be visible and public
+            if (!pub.isVisible() || pub.isConfidential()) {
+                return Response.status(Response.Status.FORBIDDEN)
+                       .entity(Map.of("message", "Publicação não disponível para convidados"))
+                       .build();
+            }
+        } else {
+            // Authenticated: Check permissions if hidden/confidential
+            if (!pub.isVisible() || pub.isConfidential()) {
+                boolean isPermitted = (user.getRole() == UserRole.ADMINISTRADOR || 
+                                       user.getRole() == UserRole.RESPONSAVEL ||
+                                       (pub.getUploadedBy() != null && pub.getUploadedBy().getId().equals(user.getId())));
+                if (!isPermitted) {
+                    return Response.status(Response.Status.FORBIDDEN)
+                           .entity(Map.of("message", "Acesso negado"))
+                           .build();
+                }
+            }
+        }
+
         java.nio.file.Path path = Paths.get(document.getFilepath());
         if (!Files.exists(path)) {
             return Response.status(Response.Status.NOT_FOUND).build();
