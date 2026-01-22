@@ -107,6 +107,21 @@
             >
               Edit
             </button>
+            <button
+              v-if="canManagePublication"
+              @click="togglePublicationVisibility"
+              class="px-3 py-1 border rounded text-sm"
+              :class="pub.visible ? 'text-orange-600 border-orange-300' : 'text-green-600 border-green-300'"
+            >
+              {{ pub.visible ? 'Hide' : 'Show' }}
+            </button>
+            <button
+              v-if="canManagePublication"
+              @click="deletePublication"
+              class="px-3 py-1 border border-red-300 rounded text-sm text-red-600 hover:bg-red-50"
+            >
+              Delete
+            </button>
             <div v-if="isFetchingPdf" class="text-sm text-slate-500">
               Fetching file...
             </div>
@@ -156,6 +171,13 @@
                     class="text-xs text-green-600 hover:underline font-medium"
                   >
                     Edit
+                  </button>
+                  <button
+                    v-if="canDeleteComment(c)"
+                    @click="deleteComment(c)"
+                    class="text-xs text-red-600 hover:underline font-medium"
+                  >
+                    Delete
                   </button>
                 </div>
 
@@ -299,6 +321,14 @@
                 class="px-3 py-1 border rounded bg-white"
               >
                 {{ n }}
+              </button>
+            </div>
+            <div v-if="hasMyRating" class="mt-2 text-center">
+              <button
+                @click="removeMyRating"
+                class="text-xs text-red-600 hover:underline"
+              >
+                Remove my rating
               </button>
             </div>
           </div>
@@ -636,6 +666,80 @@ const saveEditComment = async (c) => {
   } catch (e) {
     console.error(e);
     alert("Error saving comment");
+  }
+};
+
+// EP19 & EP20: Manage publication (delete, hide/show) - for admin/responsavel
+const canManagePublication = computed(() => {
+  if (!auth.token.value || !auth.user.value) return false;
+  return (
+    auth.user.value.role === "ADMINISTRADOR" ||
+    auth.user.value.role === "RESPONSAVEL"
+  );
+});
+
+const togglePublicationVisibility = async () => {
+  if (!confirm(`Are you sure you want to ${pub.value.visible ? 'hide' : 'show'} this publication?`)) return;
+  try {
+    // Backend uses POST for visibility toggle (EP20)
+    await api.post(`/publications/${id}/visibility`, { visible: !pub.value.visible });
+    pub.value.visible = !pub.value.visible;
+  } catch (e) {
+    console.error(e);
+    alert(e?.response?.data?.message || "Error changing publication visibility");
+  }
+};
+
+const deletePublication = async () => {
+  if (!confirm("Are you sure you want to DELETE this publication? This action cannot be undone.")) return;
+  try {
+    await api.delete(`/publications/${id}`);
+    alert("Publication deleted successfully");
+    navigateTo("/");
+  } catch (e) {
+    console.error(e);
+    alert(e?.response?.data?.message || "Error deleting publication");
+  }
+};
+
+// EP31: Delete own comment
+const canDeleteComment = (c) => {
+  if (!auth.token.value || !auth.user.value) return false;
+  // User can delete their own comments, or admin/responsavel can delete any
+  return (
+    (c.author && c.author.id === auth.user.value.id) ||
+    auth.user.value.role === "ADMINISTRADOR" ||
+    auth.user.value.role === "RESPONSAVEL"
+  );
+};
+
+const deleteComment = async (c) => {
+  if (!confirm("Are you sure you want to delete this comment?")) return;
+  try {
+    await api.delete(`/comments/${c.id}`);
+    comments.value = comments.value.filter(comment => comment.id !== c.id);
+  } catch (e) {
+    console.error(e);
+    alert(e?.response?.data?.message || "Error deleting comment");
+  }
+};
+
+// EP27: Remove own rating
+const hasMyRating = computed(() => {
+  if (!auth.token.value || !auth.user.value) return false;
+  return ratingsList.value.some(r => r.userId === auth.user.value.id);
+});
+
+const removeMyRating = async () => {
+  if (!confirm("Are you sure you want to remove your rating?")) return;
+  try {
+    await api.delete(`/publications/${id}/ratings`);
+    // Refresh ratings
+    const rResp = await api.get(`/publications/${id}/ratings`);
+    ratings.value = rResp.data || {};
+  } catch (e) {
+    console.error(e);
+    alert(e?.response?.data?.message || "Error removing rating");
   }
 };
 </script>

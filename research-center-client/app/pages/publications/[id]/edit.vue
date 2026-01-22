@@ -244,6 +244,42 @@
                   >
                 </label>
               </div>
+
+              <!-- Tags Management (EP37/EP38) -->
+              <div class="bg-white border rounded p-3 mt-4">
+                <div class="text-sm font-medium text-slate-600 mb-2">Tags</div>
+                <div class="flex flex-wrap gap-2 mb-2">
+                  <span
+                    v-for="t in publicationTags"
+                    :key="t.id"
+                    class="inline-flex items-center gap-1 bg-gray-100 px-2 py-1 rounded-full text-sm"
+                  >
+                    <span class="text-slate-800">{{ t.name }}</span>
+                    <button
+                      type="button"
+                      @click="removeTagFromPublication(t.id)"
+                      class="text-slate-400 hover:text-red-600"
+                    >
+                      ×
+                    </button>
+                  </span>
+                  <span v-if="publicationTags.length === 0" class="text-sm text-slate-400">No tags</span>
+                </div>
+                <select
+                  v-model="selectedTagId"
+                  @change="addTagToPublication"
+                  class="w-full border rounded px-3 py-2 text-sm"
+                >
+                  <option value="">Add a tag...</option>
+                  <option
+                    v-for="t in availableTags"
+                    :key="t.id"
+                    :value="t.id"
+                  >
+                    {{ t.name }}
+                  </option>
+                </select>
+              </div>
             </div>
 
             <div class="mt-4 text-xs text-slate-500">
@@ -259,7 +295,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 const route = useRoute();
 const id = route.params.id;
 const api = useApi();
@@ -286,6 +322,17 @@ const form = ref({
 
 const authorQuery = ref("");
 const suggestions = ref([]);
+
+// Tags management state (EP37/EP38)
+const allTags = ref([]);
+const publicationTags = ref([]);
+const selectedTagId = ref("");
+
+const availableTags = computed(() => {
+  const existingIds = new Set(publicationTags.value.map(t => t.id));
+  return allTags.value.filter(t => !existingIds.has(t.id));
+});
+
 
 const load = async () => {
   loading.value = true;
@@ -314,6 +361,13 @@ const load = async () => {
     form.value.doi = p.doi || "";
     form.value.visible = p.visible !== undefined ? p.visible : true;
     form.value.confidential = p.confidential || false;
+    
+    // Load publication tags
+    publicationTags.value = Array.isArray(p.tags) ? p.tags.slice() : [];
+    
+    // Load all available tags
+    const tagsResp = await api.get('/tags');
+    allTags.value = tagsResp.data || [];
   } catch (e) {
     console.error(e);
     error.value = e?.response?.data?.message || "Error loading publication";
@@ -416,6 +470,34 @@ const save = async () => {
 };
 
 const cancel = () => navigateTo(`/publications/${id}`);
+
+// EP37: Add tag to publication
+const addTagToPublication = async () => {
+  if (!selectedTagId.value) return;
+  const tagId = parseInt(selectedTagId.value);
+  try {
+    await api.post(`/publications/${id}/tags`, { tagId });
+    const tag = allTags.value.find(t => t.id === tagId);
+    if (tag) {
+      publicationTags.value.push(tag);
+    }
+    selectedTagId.value = "";
+  } catch (e) {
+    console.error(e);
+    alert(e?.response?.data?.message || "Error adding tag");
+  }
+};
+
+// EP38: Remove tag from publication
+const removeTagFromPublication = async (tagId) => {
+  try {
+    await api.delete(`/publications/${id}/tags/${tagId}`);
+    publicationTags.value = publicationTags.value.filter(t => t.id !== tagId);
+  } catch (e) {
+    console.error(e);
+    alert(e?.response?.data?.message || "Error removing tag");
+  }
+};
 
 load();
 </script>

@@ -39,6 +39,7 @@
               >
                 Statistics
               </NuxtLink>
+
             </div>
           </div>
           <div class="flex items-center">
@@ -266,6 +267,12 @@
                       class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                       >Hidden Content</NuxtLink
                     >
+                    <NuxtLink
+                      v-if="isAdmin"
+                      to="/admin/reports"
+                      class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >Activity Reports</NuxtLink
+                    >
                   </div>
                 </div>
               </div>
@@ -309,6 +316,11 @@ const notificationsState = useNotifications();
 
 // Admin dropdown state
 const adminOpen = ref(false);
+
+// Check if user is admin
+const isAdmin = computed(() => 
+  auth.token.value && auth.user.value?.role === "ADMINISTRADOR"
+);
 
 // Notifications dropdown state
 const notificationsOpen = ref(false);

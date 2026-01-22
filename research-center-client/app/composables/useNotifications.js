@@ -3,8 +3,16 @@ export const useNotifications = () => {
   const unreadCount = useState('unreadCount', () => 0)
   const loading = useState('notificationsLoading', () => false)
   const api = useApi()
+  const auth = useAuth()
 
   const fetchNotifications = async () => {
+    // Don't fetch if user is not authenticated
+    if (!auth.token.value) {
+      notifications.value = []
+      unreadCount.value = 0
+      return
+    }
+    
     loading.value = true
     try {
       const response = await api.get('/notifications')
