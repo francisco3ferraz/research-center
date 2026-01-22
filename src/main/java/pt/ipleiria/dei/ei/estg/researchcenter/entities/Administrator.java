@@ -3,7 +3,7 @@ package pt.ipleiria.dei.ei.estg.researchcenter.entities;
 import jakarta.persistence.Entity;
 
 @Entity
-public class Administrator extends User {
+public class Administrator extends Manager {
     
     // Default constructor
     public Administrator() {

@@ -153,25 +153,31 @@ public class StatisticsBean {
                 .setMaxResults(5)
                 .getResultList();
 
-        var recentUploadsList = recentUploads.stream().map(r -> Map.of(
-                "id", r[0],
-                "title", r[1],
-                "uploadedAt", r[2] != null ? r[2].toString() : null
-        )).toList();
-
-        return Map.of(
-                "userId", userId,
-                "publicationsUploaded", publicationsUploaded,
-                "commentsCreated", commentsCreated,
-                "ratingsGiven", ratingsGiven,
-                "tagsSubscribed", em.createQuery("SELECT COUNT(t) FROM Collaborator c JOIN c.subscribedTags t WHERE c.username = :u", Long.class)
+        // Use HashMap because Map.of does not allow null values
+        Map<String, Object> result = new HashMap<>();
+        result.put("userId", userId);
+        result.put("publicationsUploaded", publicationsUploaded);
+        result.put("commentsCreated", commentsCreated);
+        result.put("ratingsGiven", ratingsGiven);
+        result.put("tagsSubscribed", em.createQuery("SELECT COUNT(t) FROM Collaborator c JOIN c.subscribedTags t WHERE c.username = :u", Long.class)
                         .setParameter("u", username)
-                        .getResultStream().findFirst().orElse(0L),
-                "averageRatingReceived", avgRatingReceived != null ? avgRatingReceived : 0.0,
-                "totalRatingsReceived", totalRatingsReceived != null ? totalRatingsReceived : 0,
-                "mostActiveTag", mostActiveTag,
-                "recentUploads", recentUploadsList
-        );
+                        .getResultStream().findFirst().orElse(0L));
+        result.put("averageRatingReceived", avgRatingReceived != null ? avgRatingReceived : 0.0);
+        result.put("totalRatingsReceived", totalRatingsReceived != null ? totalRatingsReceived : 0);
+        result.put("mostActiveTag", mostActiveTag);
+        
+        // Handle recent uploads safely
+        List<Map<String, Object>> recentUploadsList = recentUploads.stream().map(r -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", r[0]);
+            m.put("title", r[1]);
+            m.put("uploadedAt", r[2] != null ? r[2].toString() : null);
+            return m;
+        }).toList();
+
+        result.put("recentUploads", recentUploadsList);
+
+        return result;
     }
 
     public List<Map<String, Object>> getTopPublications(String criteria, int limit) {
@@ -202,15 +208,17 @@ public class StatisticsBean {
                 break;
         }
 
-        return pubs.stream().map(p -> Map.of(
-                "id", p.getId(),
-                "title", p.getTitle(),
-                "averageRating", p.getAverageRating(),
-                "ratingsCount", p.getRatings() != null ? p.getRatings().size() : 0,
-                "commentsCount", p.getComments() != null ? p.getComments().size() : 0,
-                "viewsCount", p.getViewsCount(),
-                "uploadedBy", p.getUploadedBy() != null ? Map.of("id", p.getUploadedBy().getId(), "name", p.getUploadedBy().getName()) : null
-        )).toList();
+        return pubs.stream().map(p -> {
+            Map<String, Object> m = new HashMap<>();
+            m.put("id", p.getId());
+            m.put("title", p.getTitle());
+            m.put("averageRating", p.getAverageRating());
+            m.put("ratingsCount", p.getRatings() != null ? p.getRatings().size() : 0);
+            m.put("commentsCount", p.getComments() != null ? p.getComments().size() : 0);
+            m.put("viewsCount", p.getViewsCount());
+            m.put("uploadedBy", p.getUploadedBy() != null ? Map.of("id", p.getUploadedBy().getId(), "name", p.getUploadedBy().getName()) : null);
+            return m;
+        }).toList();
     }
 }
 

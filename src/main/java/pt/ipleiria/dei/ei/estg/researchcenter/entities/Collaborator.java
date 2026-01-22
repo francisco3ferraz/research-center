@@ -29,7 +29,12 @@ public class Collaborator extends User {
 
     // Constructor with parameters
     public Collaborator(String username, String password, String name, String email) {
-        super(username, password, name, email, UserRole.COLABORADOR);
+        this(username, password, name, email, UserRole.COLABORADOR);
+    }
+
+    // Protected constructor for subclasses
+    protected Collaborator(String username, String password, String name, String email, UserRole role) {
+        super(username, password, name, email, role);
         this.publications = new ArrayList<>();
         this.subscribedTags = new ArrayList<>();
         this.comments = new ArrayList<>();
