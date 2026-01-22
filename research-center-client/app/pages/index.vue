@@ -157,6 +157,14 @@
             <div class="text-sm text-slate-500 mt-1">
               {{ (p.authors || []).join(", ") }} — {{ p.year || "—" }}
             </div>
+            <div class="mt-2 flex gap-2">
+               <span v-if="!p.visible" class="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded font-medium border border-yellow-200">
+                  Hidden
+               </span>
+               <span v-if="p.confidential" class="px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded font-medium border border-red-200">
+                  Confidential
+               </span>
+            </div>
             <div
               class="flex items-center justify-between mt-3 text-sm text-slate-600"
             >

@@ -498,7 +498,9 @@ public class PublicationService {
                 dto.getAiGeneratedSummary(),
                 dto.getYear(),
                 dto.getPublisher(),
-                dto.getDoi()
+                dto.getDoi(),
+                true, // default visible
+                false // default confidential
             );
         }
 
@@ -574,7 +576,9 @@ public class PublicationService {
                 dto.getAiGeneratedSummary(),
                 dto.getYear(),
                 dto.getPublisher(),
-                dto.getDoi()
+                dto.getDoi(),
+                true,
+                false
             );
         }
 
@@ -623,7 +627,9 @@ public class PublicationService {
             dto.getAiGeneratedSummary(),
             dto.getYear(),
             dto.getPublisher(),
-            dto.getDoi()
+            dto.getDoi(),
+            dto.isVisible(),
+            dto.isConfidential()
         );
 
         // Activity log for update (best-effort: changed fields from non-null inputs)

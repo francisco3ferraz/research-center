@@ -589,7 +589,8 @@ public class PublicationBean {
     }
     
     public void update(Long id, String title, List<String> authors, String abstract_, 
-                      String aiGeneratedSummary, Integer year, String publisher, String doi)
+                      String aiGeneratedSummary, Integer year, String publisher, String doi,
+                      boolean visible, boolean confidential)
             throws MyEntityNotFoundException, MyConstraintViolationException {
         var publication = find(id);
         
@@ -604,6 +605,8 @@ public class PublicationBean {
             publication.setYear(year);
             publication.setPublisher(publisher);
             publication.setDoi(doi);
+            publication.setVisible(visible);
+            publication.setConfidential(confidential);
             publication.setUpdatedAt(LocalDateTime.now());
             em.flush();
         } catch (ConstraintViolationException e) {

@@ -459,6 +459,8 @@ const save = async () => {
       year: form.value.year,
       publisher: form.value.publisher,
       doi: form.value.doi,
+      confidential: form.value.confidential,
+      visible: form.value.visible
     };
     await api.put(`/publications/${id}`, payload);
     navigateTo(`/publications/${id}`);

@@ -13,6 +13,14 @@
           <div class="text-sm text-slate-500 mt-1">
             {{ (pub.authors || []).join(", ") }} — {{ pub.year }}
           </div>
+          <div class="mt-2 flex gap-2">
+             <span v-if="!pub.visible" class="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded font-medium border border-yellow-200">
+                Hidden
+             </span>
+             <span v-if="pub.confidential" class="px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded font-medium border border-red-200">
+                Confidential
+             </span>
+          </div>
           <div class="mt-3 flex items-center gap-2 flex-wrap">
             <span
               v-for="t in pub.tags || []"
