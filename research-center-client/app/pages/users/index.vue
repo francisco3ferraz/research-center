@@ -97,6 +97,7 @@
             <button @click="closeForm" class="px-3 py-2 border rounded">Cancel</button>
             <button @click="saveUser" class="bg-blue-600 text-white px-3 py-2 rounded">Save</button>
           </div>
+          <div v-if="error" class="text-red-600 mt-2 text-sm text-center">{{ error }}</div>
         </div>
       </div>
     </transition>
@@ -141,20 +142,28 @@ const loadUsers = async () => {
 
 const openCreate = () => {
   editingId.value = null
+  error.value = null
   form.value = { username: '', name: '', email: '', password: '', role: 'COLABORADOR' }
   showForm.value = true
 }
 
 const openEdit = (u) => {
   editingId.value = u.id
+  error.value = null
   form.value = { username: u.username, name: u.name, email: u.email, password: '', role: u.role }
   showForm.value = true
 }
 
-const closeForm = () => { showForm.value = false }
+const closeForm = () => { showForm.value = false; error.value = null; }
 
 const saveUser = async () => {
   error.value = null
+  
+  if (!form.value.email || !form.value.email.includes('@')) {
+    error.value = "Invalid email"
+    return
+  }
+
   try {
     if (editingId.value) {
       await api.put(`/users/${editingId.value}`, {
