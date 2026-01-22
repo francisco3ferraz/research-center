@@ -615,7 +615,7 @@ public class PublicationService {
     
     @PUT
     @Authenticated
-    @RequireOwnership(parameterName = "id", bypassRoles = {"RESPONSAVEL","ADMINISTRADOR"})
+    @RequireOwnership(parameterName = "id", bypassRoles = {"ADMINISTRADOR"})
     @Path("/{id}")
     public Response update(@PathParam("id") Long id, PublicationDTO dto) throws Exception {
         
@@ -661,7 +661,7 @@ public class PublicationService {
     }
     
     @DELETE
-    @RolesAllowed({"RESPONSAVEL","ADMINISTRADOR"})
+    @RolesAllowed({"ADMINISTRADOR"})
     @Path("/{id}")
     public Response delete(@PathParam("id") Long id) throws Exception {
         
@@ -767,6 +767,53 @@ public class PublicationService {
         return Response.ok(stream)
                        .header("Content-Disposition", "attachment; filename=\"" + document.getFilename() + "\"")
                        .build();
+    }
+
+    @POST
+    @Path("/{id}/file")
+    @Authenticated
+    @Consumes(MediaType.MULTIPART_FORM_DATA)
+    public Response uploadFile(@PathParam("id") Long id, MultipartFormDataInput input) throws Exception {
+        var pub = publicationBean.find(id);
+        User user = getUserFromToken();
+        if (user == null) {
+            throw new ForbiddenException("Authentication required");
+        }
+        
+        // Ownership check
+        boolean isPermitted = (user.getRole() == UserRole.ADMINISTRADOR || 
+                               user.getRole() == UserRole.RESPONSAVEL ||
+                               (pub.getUploadedBy() != null && pub.getUploadedBy().getId().equals(user.getId())));
+        if (!isPermitted) {
+            throw new ForbiddenException("Permission denied");
+        }
+
+        Map<String, List<InputPart>> form = input.getFormDataMap();
+        if (!form.containsKey("file")) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(Map.of("message", "file part missing")).build();
+        }
+
+        try {
+            InputPart filePart = form.get("file").get(0);
+            InputStream stream = filePart.getBody(InputStream.class, null);
+            String contentDisposition = filePart.getHeaders().getFirst("Content-Disposition");
+            String filename = "file";
+            if (contentDisposition != null && contentDisposition.contains("filename=")) {
+                var idx = contentDisposition.indexOf("filename=");
+                filename = contentDisposition.substring(idx + 9).replaceAll("\"", "").trim();
+            }
+            documentBean.update(filename, id, stream);
+            
+            // Log activity
+            try {
+               activityLogBean.create(user, "UPDATE", "PUBLICATION", id, "Ficheiro atualizado: " + filename);
+            } catch(Exception ignore) {}
+
+            return Response.ok(Map.of("message", "File uploaded successfully")).build();
+        } catch (Exception e) {
+             e.printStackTrace();
+             return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(Map.of("message", "Error saving file: " + e.getMessage())).build();
+        }
     }
 
     // Spec typo compatibility: accept 'visiblity' path as well (PATCH may be unsupported by some servers)

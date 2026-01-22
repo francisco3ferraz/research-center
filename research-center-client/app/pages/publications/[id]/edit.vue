@@ -220,6 +220,19 @@
                 />
               </label>
 
+              <label>
+                 <div class="text-sm text-slate-600 mb-1">
+                    Update PDF File
+                    <span v-if="pub.documentId" class="text-xs text-green-600 ml-1">(File already exists)</span>
+                 </div>
+                 <input
+                   type="file"
+                   accept=".pdf"
+                   @change="handleFileChange"
+                   class="w-full border rounded px-3 py-2 text-sm"
+                 />
+              </label>
+
               <!-- Visibility and Confidentiality Checkboxes -->
               <div class="bg-white border rounded p-3 space-y-3 mt-4">
                 <label class="flex items-center gap-2 cursor-pointer">
@@ -343,7 +356,7 @@ const load = async () => {
     const currentUser = auth.user.value;
     if (!currentUser) return navigateTo('/auth/login');
     
-    if (currentUser.role !== 'ADMINISTRADOR' && currentUser.role !== 'RESPONSAVEL') {
+    if (currentUser.role !== 'ADMINISTRADOR') {
         const ownerId = p.uploadedBy ? p.uploadedBy.id : null;
         if (!ownerId || ownerId !== currentUser.id) {
              console.warn("Unauthorized edit attempt - not the owner");
@@ -447,6 +460,16 @@ const generateAISummary = async () => {
   }
 };
 
+const file = ref(null);
+
+const handleFileChange = (e) => {
+  if (e.target.files && e.target.files.length > 0) {
+    file.value = e.target.files[0];
+  } else {
+    file.value = null;
+  }
+};
+
 const save = async () => {
   saving.value = true;
   error.value = null;
@@ -463,6 +486,14 @@ const save = async () => {
       visible: form.value.visible
     };
     await api.put(`/publications/${id}`, payload);
+    
+    // Upload file if selected
+    if (file.value) {
+       const formData = new FormData();
+       formData.append('file', file.value);
+       await api.post(`/publications/${id}/file`, formData);
+    }
+
     navigateTo(`/publications/${id}`);
   } catch (e) {
     error.value = e?.response?.data?.message || "Error saving publication";

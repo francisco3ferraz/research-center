@@ -116,7 +116,7 @@
               Edit
             </button>
             <button
-              v-if="canManagePublication"
+              v-if="canHideShow"
               @click="togglePublicationVisibility"
               class="px-3 py-1 border rounded text-sm"
               :class="pub.visible ? 'text-orange-600 border-orange-300' : 'text-green-600 border-green-300'"
@@ -124,7 +124,7 @@
               {{ pub.visible ? 'Hide' : 'Show' }}
             </button>
             <button
-              v-if="canManagePublication"
+              v-if="canDelete"
               @click="deletePublication"
               class="px-3 py-1 border border-red-300 rounded text-sm text-red-600 hover:bg-red-50"
             >
@@ -616,8 +616,7 @@ watch(isEditRoute, (isEdit) => {
 const canEdit = computed(() => {
   if (!auth.token.value || !auth.user.value) return false;
   if (
-    auth.user.value.role === "ADMINISTRADOR" ||
-    auth.user.value.role === "RESPONSAVEL"
+    auth.user.value.role === "ADMINISTRADOR"
   )
     return true;
   return (
@@ -677,13 +676,19 @@ const saveEditComment = async (c) => {
   }
 };
 
-// EP19 & EP20: Manage publication (delete, hide/show) - for admin/responsavel
-const canManagePublication = computed(() => {
+// EP20: Hide/Show - for admin/responsavel
+const canHideShow = computed(() => {
   if (!auth.token.value || !auth.user.value) return false;
   return (
     auth.user.value.role === "ADMINISTRADOR" ||
     auth.user.value.role === "RESPONSAVEL"
   );
+});
+
+// EP19: Delete - for admin ONLY
+const canDelete = computed(() => {
+  if (!auth.token.value || !auth.user.value) return false;
+  return auth.user.value.role === "ADMINISTRADOR";
 });
 
 const togglePublicationVisibility = async () => {

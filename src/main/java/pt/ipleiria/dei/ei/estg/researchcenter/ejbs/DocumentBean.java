@@ -74,6 +74,24 @@ public class DocumentBean {
         return documents.get(0);
     }
 
+    public void update(String filename, Long publicationId, InputStream stream) throws MyEntityNotFoundException, IOException {
+        // Check if exists
+        try {
+            var existingDoc = findByPublication(publicationId);
+            // Delete old file
+            var oldPath = Paths.get(existingDoc.getFilepath());
+            if (Files.exists(oldPath)) {
+                Files.delete(oldPath);
+            }
+            em.remove(existingDoc);
+            em.flush();
+        } catch (MyEntityNotFoundException ignore) {
+            // No existing document, proceed to create
+        }
+        
+        create(filename, publicationId, stream);
+    }
+
     public void delete(Long id) throws MyEntityNotFoundException, IOException {
         var document = find(id);
 
