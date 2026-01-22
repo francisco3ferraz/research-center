@@ -33,6 +33,9 @@ public class PublicationBean {
     @EJB
     private UserBean userBean;
     
+    @EJB
+    private ScientificAreaBean scientificAreaBean;
+
     public Publication create(String title, List<String> authors, PublicationType type,
                              String areaScientific, Integer year, String abstract_,
                              Long uploadedById)
@@ -41,11 +44,42 @@ public class PublicationBean {
 
         try {
             var publication = new Publication(title, authors, type, areaScientific, year, abstract_, uploadedBy);
+            
+            // Try to link with ScientificArea entity if it exists
+            if (areaScientific != null && !areaScientific.isBlank()) {
+                try {
+                    // Try to find an area with this name (case-insensitive search usually preferred but let's try direct first or use the string)
+                     // Since we don't have a findByName in ScientificAreaBean handy that returns null safely without exception, 
+                     // let's iterate or assume the caller passed a valid name. 
+                     // Actually, better to query it properly.
+                     // The previous view of ScientificAreaBean didn't show a findByName, let's allow the bean to handle it.
+                     // But wait, I can just use a query here or simpler, rely on the Bean.
+                     // Let's add a findByName to ScientificAreaBean if needed? 
+                     // Or just do a query here since we have EntityManager? No, cleaner to use Bean or query.
+                     // I will use a simple query here to avoid modifying ScientificAreaBean signature if not strictly necessary, 
+                     // BUT I am inside a Bean, I can use EM directly.
+                     
+                     var areas = em.createQuery("SELECT sa FROM ScientificArea sa WHERE LOWER(sa.name) = LOWER(:name)", ScientificArea.class)
+                            .setParameter("name", areaScientific)
+                            .getResultList();
+                     
+                     if (!areas.isEmpty()) {
+                         publication.setArea(areas.get(0));
+                     }
+                } catch (Exception e) {
+                    // Ignore linkage error, just keep the string
+                }
+            }
+            
             em.persist(publication);
             em.flush();
 
             if (uploadedBy != null) {
                 uploadedBy.addPublication(publication);
+            }
+            
+            if (publication.getArea() != null) {
+                publication.getArea().addPublication(publication);
             }
 
             return publication;

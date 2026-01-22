@@ -3,8 +3,8 @@ export const useApi = () => {
   // Use useAuth to get the shared token state and logout function
   const { token, logout } = useAuth();
 
-  // Hardcoded to avoid '8o8o' typo ghost issue
-  const baseURL = "http://localhost:8080/research-center/api";
+  // Retrieve API base URL from runtime config (env)
+  const baseURL = config.public.apiBase || "http://localhost:8080/research-center/api";
 
   // Customized $fetch wrapper
   const api = $fetch.create({

@@ -619,6 +619,9 @@ public class PublicationService {
     @Path("/{id}")
     public Response update(@PathParam("id") Long id, PublicationDTO dto) throws Exception {
         
+        // Fetch existing for comparison
+        Publication existingPub = publicationBean.findWithDetails(id);
+
         publicationBean.update(
             id,
             dto.getTitle(),
@@ -632,32 +635,53 @@ public class PublicationService {
             dto.isConfidential()
         );
 
-        // Activity log for update (best-effort: changed fields from non-null inputs)
+        // Activity log for update (smart: changed fields)
         try {
             String username = securityContext.getUserPrincipal().getName();
             var user = userBean.findByUsername(username);
             if (user != null) {
                 var fields = new java.util.ArrayList<String>();
-                if (dto.getTitle() != null) fields.add("title");
-                if (dto.getAuthors() != null) fields.add("authors");
-                if (dto.getAbstract_() != null) fields.add("abstract");
-                if (dto.getAiGeneratedSummary() != null) fields.add("aiGeneratedSummary");
-                if (dto.getYear() != null) fields.add("year");
-                if (dto.getPublisher() != null) fields.add("publisher");
-                if (dto.getDoi() != null) fields.add("doi");
-                activityLogBean.createWithChangedFields(
-                        user,
-                        "UPDATE",
-                        "PUBLICATION",
-                        id,
-                        "Publicação atualizada",
-                        String.join(",", fields)
-                );
+                if (isDifferent(dto.getTitle(), existingPub.getTitle())) fields.add("title");
+                
+                // Compare authors list
+                if (dto.getAuthors() != null) {
+                    List<String> oldAuthors = existingPub.getAuthors() != null ? existingPub.getAuthors() : List.of();
+                    if (!dto.getAuthors().equals(oldAuthors)) fields.add("authors");
+                }
+                
+                if (isDifferent(dto.getAbstract_(), existingPub.getAbstract_())) fields.add("abstract");
+                if (isDifferent(dto.getAiGeneratedSummary(), existingPub.getAiGeneratedSummary())) fields.add("aiGeneratedSummary");
+                
+                // Numbers: simple equals check (handling nulls)
+                if (!java.util.Objects.equals(dto.getYear(), existingPub.getYear())) fields.add("year");
+                
+                if (isDifferent(dto.getPublisher(), existingPub.getPublisher())) fields.add("publisher");
+                if (isDifferent(dto.getDoi(), existingPub.getDoi())) fields.add("doi");
+                
+                if (dto.isVisible() != existingPub.isVisible()) fields.add("visible");
+                if (dto.isConfidential() != existingPub.isConfidential()) fields.add("confidential");
+
+                if (!fields.isEmpty()) {
+                    activityLogBean.createWithChangedFields(
+                            user,
+                            "UPDATE",
+                            "PUBLICATION",
+                            id,
+                            "Publicação atualizada",
+                            String.join(",", fields)
+                    );
+                }
             }
         } catch (Exception ignore) {}
 
         var resultDto = publicationBean.getDTOWithDetails(id);
         return Response.ok(resultDto).build();
+    }
+    
+    private boolean isDifferent(String newVal, String oldVal) {
+        String s1 = newVal == null ? "" : newVal.trim();
+        String s2 = oldVal == null ? "" : oldVal.trim();
+        return !s1.equals(s2);
     }
     
     @DELETE
@@ -806,7 +830,7 @@ public class PublicationService {
             
             // Log activity
             try {
-               activityLogBean.create(user, "UPDATE", "PUBLICATION", id, "Ficheiro atualizado: " + filename);
+               activityLogBean.createWithChangedFields(user, "UPDATE", "PUBLICATION", id, "Ficheiro atualizado: " + filename, "document");
             } catch(Exception ignore) {}
 
             return Response.ok(Map.of("message", "File uploaded successfully")).build();
