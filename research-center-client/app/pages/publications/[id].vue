@@ -43,16 +43,34 @@
             </h3>
             <div class="text-sm text-slate-700 relative">
               <div class="whitespace-pre-wrap">
-                {{ isSummaryExpanded ? pub.aiGeneratedSummary : (pub.aiGeneratedSummary.length > 100 ? pub.aiGeneratedSummary.substring(0, 100) + '...' : pub.aiGeneratedSummary) }}
+                {{
+                  isSummaryExpanded
+                    ? pub.aiGeneratedSummary
+                    : pub.aiGeneratedSummary.length > 100
+                      ? pub.aiGeneratedSummary.substring(0, 100) + "..."
+                      : pub.aiGeneratedSummary
+                }}
               </div>
-              <button 
-                v-if="pub.aiGeneratedSummary.length > 100" 
+              <button
+                v-if="pub.aiGeneratedSummary.length > 100"
                 @click="isSummaryExpanded = !isSummaryExpanded"
                 class="mt-2 text-xs font-semibold text-blue-700 hover:text-blue-900 focus:outline-none flex items-center gap-1"
               >
-                {{ isSummaryExpanded ? 'Minimize' : 'Read more' }}
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" :class="{ 'rotate-180': isSummaryExpanded }">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                {{ isSummaryExpanded ? "Minimize" : "Read more" }}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-3 w-3"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  :class="{ 'rotate-180': isSummaryExpanded }"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M19 9l-7 7-7-7"
+                  />
                 </svg>
               </button>
             </div>
@@ -109,23 +127,63 @@
                 :key="c.id"
                 class="border rounded p-3 bg-gray-50"
               >
-                  <div class="flex items-center gap-2">
-                    <div class="font-medium">
-                        {{ c.author?.name || "Anonymous" }}
-                    </div>
-                     <span v-if="c.visible === false" class="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold">Hidden</span>
+                <div class="flex items-center gap-2">
+                  <div class="font-medium">
+                    {{ c.author?.name || "Anonymous" }}
                   </div>
-                  <div class="flex items-center gap-2">
-                      <div class="text-xs text-slate-400">
-                        {{
-                        c.createdAt ? new Date(c.createdAt).toLocaleString() : ""
-                        }}
-                      </div>
-                      <button v-if="canManageComments" @click="toggleCommentVisibility(c)" class="text-xs text-blue-600 hover:underline font-medium">
-                        {{ c.visible ? 'Hide' : 'Show' }}
-                      </button>
+                  <span
+                    v-if="c.visible === false"
+                    class="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold"
+                    >Hidden</span
+                  >
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="text-xs text-slate-400">
+                    {{
+                      c.createdAt ? new Date(c.createdAt).toLocaleString() : ""
+                    }}
                   </div>
-                <div class="mt-2 text-slate-700">
+                  <button
+                    v-if="canManageComments"
+                    @click="toggleCommentVisibility(c)"
+                    class="text-xs text-blue-600 hover:underline font-medium"
+                  >
+                    {{ c.visible ? "Hide" : "Show" }}
+                  </button>
+                  <button
+                    v-if="canEditComment(c)"
+                    @click="startEditComment(c)"
+                    class="text-xs text-green-600 hover:underline font-medium"
+                  >
+                    Edit
+                  </button>
+                </div>
+
+                <!-- Edit Mode -->
+                <div v-if="editingCommentId === c.id" class="mt-2">
+                  <textarea
+                    v-model="editCommentContent"
+                    class="w-full border p-2 rounded text-sm"
+                    rows="3"
+                  ></textarea>
+                  <div class="mt-2 flex gap-2">
+                    <button
+                      @click="saveEditComment(c)"
+                      class="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                    >
+                      Save
+                    </button>
+                    <button
+                      @click="cancelEditComment()"
+                      class="px-3 py-1 border rounded text-sm hover:bg-gray-100"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Normal View -->
+                <div v-else class="mt-2 text-slate-700">
                   {{ c.content || c.text || "" }}
                 </div>
               </div>
@@ -196,7 +254,10 @@
                 <div class="flex justify-between items-start">
                   <div>
                     <div class="text-sm font-medium">
-                      {{ h.actionType }} por {{ h.editedBy?.name || h.editedBy?.username || 'Sistema' }}
+                      {{ h.actionType }} por
+                      {{
+                        h.editedBy?.name || h.editedBy?.username || "Sistema"
+                      }}
                     </div>
                     <div class="text-xs text-slate-500">
                       {{ h.description }}
@@ -301,6 +362,10 @@ const subscribedTagIds = ref(new Set());
 const history = ref([]);
 const loadingHistory = ref(false);
 const isSummaryExpanded = ref(false);
+
+// Edit comment state
+const editingCommentId = ref(null);
+const editCommentContent = ref("");
 
 // Pagination state
 const pageSize = 10;
@@ -526,13 +591,51 @@ const canEdit = computed(() => {
 
 const canManageComments = computed(() => {
   if (!auth.token.value || !auth.user.value) return false;
-  return auth.user.value.role === 'ADMINISTRADOR' || auth.user.value.role === 'RESPONSAVEL';
+  return (
+    auth.user.value.role === "ADMINISTRADOR" ||
+    auth.user.value.role === "RESPONSAVEL"
+  );
 });
 
 const toggleCommentVisibility = async (c) => {
-    try {
-        await api.patch(`/comments/${c.id}/visibility`, { visible: !c.visible });
-        c.visible = !c.visible; 
-    } catch(e) { console.error(e); alert('Error changing visibility'); }
+  try {
+    await api.patch(`/comments/${c.id}/visibility`, { visible: !c.visible });
+    c.visible = !c.visible;
+  } catch (e) {
+    console.error(e);
+    alert("Error changing visibility");
+  }
+};
+
+// Edit comment functions
+const canEditComment = (c) => {
+  if (!auth.token.value || !auth.user.value) return false;
+  return c.author && c.author.id === auth.user.value.id;
+};
+
+const startEditComment = (c) => {
+  editingCommentId.value = c.id;
+  editCommentContent.value = c.content || c.text || "";
+};
+
+const cancelEditComment = () => {
+  editingCommentId.value = null;
+  editCommentContent.value = "";
+};
+
+const saveEditComment = async (c) => {
+  if (!editCommentContent.value.trim()) {
+    alert("Comment cannot be empty");
+    return;
+  }
+  try {
+    await api.put(`/comments/${c.id}`, { content: editCommentContent.value });
+    c.content = editCommentContent.value;
+    c.text = editCommentContent.value;
+    cancelEditComment();
+  } catch (e) {
+    console.error(e);
+    alert("Error saving comment");
+  }
 };
 </script>
