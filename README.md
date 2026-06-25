@@ -51,6 +51,8 @@ Terraform code in `terraform/` defines:
 - Private RDS PostgreSQL instance.
 - Security groups that restrict PostgreSQL port `5432` to the backend application server.
 
+![AWS deployment architecture](docs/aws-architecture.svg)
+
 ## Repository Layout
 
 ```text
@@ -187,6 +189,13 @@ terraform -chdir=terraform init
 terraform -chdir=terraform fmt -check
 terraform -chdir=terraform validate
 terraform -chdir=terraform plan
+terraform -chdir=terraform apply
+```
+
+Quick apply:
+
+```bash
+terraform -chdir=terraform init && terraform -chdir=terraform apply
 ```
 
 The EC2 backend bootstrap installs Docker, Docker Buildx, and Docker Compose, clones the configured repository, writes the `.env` file from Terraform variables, builds the WAR, starts an AWS-specific Docker Compose backend service, and deploys the WAR into the WildFly container. The AWS bootstrap points the backend at RDS and intentionally does not start the local development PostgreSQL or Ollama services.

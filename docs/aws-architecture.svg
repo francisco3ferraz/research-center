@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
+  <title id="title">Research Center AWS deployment architecture</title>
+  <desc id="desc">Client requests flow through CloudFront and S3 for the frontend, then API requests reach a WildFly backend EC2 instance in a public subnet, which connects to an RDS PostgreSQL database in private subnets.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#1f2937"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 30px Arial, sans-serif; fill: #111827; }
+      .label { font: 700 18px Arial, sans-serif; fill: #111827; }
+      .small { font: 14px Arial, sans-serif; fill: #374151; }
+      .tiny { font: 12px Arial, sans-serif; fill: #4b5563; }
+      .box { fill: #ffffff; stroke: #334155; stroke-width: 2; rx: 8; }
+      .subnet-public { fill: #ecfeff; stroke: #0891b2; stroke-width: 2; rx: 8; }
+      .subnet-private { fill: #f0fdf4; stroke: #16a34a; stroke-width: 2; rx: 8; }
+      .vpc { fill: #f1f5f9; stroke: #475569; stroke-width: 2; rx: 10; }
+      .service-blue { fill: #dbeafe; stroke: #2563eb; stroke-width: 2; rx: 8; }
+      .service-orange { fill: #ffedd5; stroke: #ea580c; stroke-width: 2; rx: 8; }
+      .service-green { fill: #dcfce7; stroke: #16a34a; stroke-width: 2; rx: 8; }
+      .line { stroke: #1f2937; stroke-width: 3; fill: none; marker-end: url(#arrow); }
+      .dash { stroke: #64748b; stroke-width: 2; stroke-dasharray: 8 6; fill: none; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1200" height="720"/>
+  <text class="title" x="60" y="58">Research Center AWS Architecture</text>
+  <text class="small" x="60" y="84">Static Nuxt frontend on S3 + CloudFront, WildFly backend on EC2, PostgreSQL on private RDS.</text>
+
+  <rect class="box" x="60" y="150" width="160" height="90"/>
+  <text class="label" x="105" y="188">Client</text>
+  <text class="small" x="92" y="214">Browser</text>
+
+  <rect class="service-blue" x="300" y="130" width="190" height="130"/>
+  <text class="label" x="336" y="174">CloudFront</text>
+  <text class="small" x="326" y="202">HTTPS entry point</text>
+  <text class="tiny" x="324" y="226">SPA + API path routing</text>
+
+  <rect class="service-orange" x="570" y="130" width="190" height="130"/>
+  <text class="label" x="612" y="174">S3 Bucket</text>
+  <text class="small" x="604" y="202">Nuxt static files</text>
+  <text class="tiny" x="606" y="226">Private, OAC only</text>
+
+  <rect class="vpc" x="250" y="330" width="890" height="300"/>
+  <text class="label" x="280" y="366">AWS VPC</text>
+  <text class="small" x="280" y="392">Public subnet for backend ingress, private subnets for database.</text>
+
+  <rect class="subnet-public" x="300" y="430" width="330" height="150"/>
+  <text class="label" x="330" y="466">Public Subnet</text>
+  <rect class="service-blue" x="365" y="490" width="200" height="60"/>
+  <text class="label" x="398" y="516">EC2 WildFly</text>
+  <text class="tiny" x="400" y="538">Docker backend :8080</text>
+
+  <rect class="subnet-private" x="760" y="430" width="330" height="150"/>
+  <text class="label" x="790" y="466">Private DB Subnets</text>
+  <rect class="service-green" x="825" y="490" width="200" height="60"/>
+  <text class="label" x="864" y="516">RDS PostgreSQL</text>
+  <text class="tiny" x="862" y="538">Port 5432, private only</text>
+
+  <path class="line" d="M 220 195 L 300 195"/>
+  <text class="tiny" x="238" y="180">HTTPS</text>
+
+  <path class="line" d="M 490 176 L 570 176"/>
+  <text class="tiny" x="506" y="160">Static assets</text>
+
+  <path class="line" d="M 395 260 C 395 330 465 350 465 490"/>
+  <text class="tiny" x="420" y="320">/research-center/api/*</text>
+
+  <path class="line" d="M 565 520 L 825 520"/>
+  <text class="tiny" x="670" y="502">JDBC 5432</text>
+
+  <path class="dash" d="M 665 260 C 665 295 610 305 520 305"/>
+  <text class="tiny" x="598" y="292">CloudFront OAC</text>
+
+  <rect class="box" x="60" y="530" width="180" height="70"/>
+  <text class="label" x="92" y="560">Terraform</text>
+  <text class="tiny" x="82" y="582">VPC, EC2, RDS, S3, CDN</text>
+</svg>
