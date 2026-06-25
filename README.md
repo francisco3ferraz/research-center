@@ -1,6 +1,8 @@
 # Research Center
 
-Research Center is a full-stack publication management platform for academic research groups. It provides a Jakarta EE backend, a Nuxt client, local Docker orchestration, and Terraform definitions for AWS production infrastructure.
+Research Center is a full-stack publication management platform for academic research groups. It combines a Jakarta EE backend, a Nuxt frontend, local Docker orchestration, and Terraform-managed AWS infrastructure.
+
+The project demonstrates a production-style deployment footprint: private database subnets, managed PostgreSQL, an EC2-hosted WildFly backend, and a static frontend distributed through S3 and CloudFront.
 
 ## Contents
 
@@ -8,12 +10,15 @@ Research Center is a full-stack publication management platform for academic res
 - [Repository Layout](#repository-layout)
 - [Prerequisites](#prerequisites)
 - [Local Development](#local-development)
+- [AWS Deployment](#aws-deployment)
+- [Frontend Deployment](#frontend-deployment)
 - [Verification](#verification)
-- [AWS Infrastructure](#aws-infrastructure)
 - [Operational Notes](#operational-notes)
 - [Troubleshooting](#troubleshooting)
 
 ## Architecture
+
+![AWS deployment architecture](docs/aws-architecture.svg)
 
 ### Backend
 
@@ -29,29 +34,34 @@ Research Center is a full-stack publication management platform for academic res
 
 - Nuxt 4 SPA in `research-center-client`.
 - Tailwind CSS.
-- Default API base URL: `http://localhost:8080/research-center/api`.
-- Production static hosting through private S3 and CloudFront.
-
-### Local Services
-
-Docker Compose starts:
-
-- `webserver`: WildFly backend container.
-- `db`: PostgreSQL.
-- `smtp`: fake SMTP server for password recovery email flows.
-- `ollama`: local LLM service used by AI summary features.
+- Local API fallback: `http://localhost:8080/research-center/api`.
+- Production API base: `/research-center/api`, routed through CloudFront.
+- Static production hosting through private S3 and CloudFront.
 
 ### AWS Infrastructure
 
-Terraform code in `terraform/` defines:
+Terraform in `terraform/` provisions:
 
 - VPC with public subnets and private database subnets.
-- Public frontend Application Load Balancer.
-- EC2 instance that bootstraps Docker, clones the repository, and starts the backend stack with Docker Compose.
-- Private RDS PostgreSQL instance.
-- Security groups that restrict PostgreSQL port `5432` to the backend application server.
+- EC2 instance in a public subnet for the WildFly backend.
+- RDS PostgreSQL in private subnets.
+- Security groups that restrict PostgreSQL `5432` to the backend application server.
+- Private S3 bucket for generated Nuxt frontend files.
+- CloudFront distribution for frontend delivery and API path routing.
+- Optional frontend ALB resources for instance-based web targets.
 
-![AWS deployment architecture](docs/aws-architecture.svg)
+Request flow:
+
+```text
+Browser
+  -> CloudFront
+  -> S3 static frontend
+
+Browser API request
+  -> CloudFront /research-center/api/*
+  -> EC2 WildFly backend on :8080
+  -> RDS PostgreSQL on :5432
+```
 
 ## Repository Layout
 
@@ -61,7 +71,8 @@ Terraform code in `terraform/` defines:
 ├── src/main/resources/META-INF    # JPA/CDI configuration
 ├── research-center-client         # Nuxt frontend
 ├── terraform                      # AWS infrastructure as code
-├── scripts                        # Local helper scripts
+├── scripts                        # Deployment and helper scripts
+├── docs                           # Architecture diagram and project documentation assets
 ├── Dockerfile                     # WildFly backend image
 ├── docker-compose.yaml            # Local service stack
 ├── Makefile                       # Local build/deploy commands
@@ -76,17 +87,15 @@ Local development:
 - Java 17.
 - Maven, or the included Maven wrapper through `bash mvnw`.
 - Node.js and npm.
-- Terraform 1.6 or newer for infrastructure work.
 
 AWS deployment:
 
+- Terraform 1.6 or newer.
 - AWS credentials configured outside the repository.
 - Permission to manage VPC, EC2, IAM, ALB, RDS, S3, and CloudFront resources.
 - Secure values supplied through environment variables or a secrets workflow.
 
 ## Local Development
-
-### 1. Configure Environment
 
 Create a local environment file:
 
@@ -96,31 +105,26 @@ cp .env.example .env
 
 Review `.env` before starting services. Do not commit `.env`.
 
-### 2. Start Local Services
+Start the local stack:
 
 ```bash
 make up
 ```
 
-This builds and starts the backend, PostgreSQL, fake SMTP, and Ollama containers.
+Docker Compose starts:
 
-### 3. Build and Deploy Backend
+- `webserver`: WildFly backend container.
+- `db`: PostgreSQL.
+- `smtp`: fake SMTP server for password recovery email flows.
+- `ollama`: local LLM service used by AI summary features.
+
+Build and deploy the backend WAR into the running WildFly container:
 
 ```bash
 make deploy
 ```
 
-This builds `target/research-center.war` and copies it into the running WildFly container.
-
-If Maven is not installed locally, use:
-
-```bash
-bash mvnw test
-```
-
-Note: `mvnw` may not have execute permission in a fresh checkout. Running it through `bash mvnw` avoids that issue.
-
-### 4. Start Frontend
+Start the frontend:
 
 ```bash
 cd research-center-client
@@ -128,22 +132,86 @@ npm install
 npm run dev
 ```
 
-Frontend URL:
+Local URLs:
 
 ```text
-http://localhost:3000
+Frontend: http://localhost:3000
+Backend:  http://localhost:8080/research-center/api
 ```
 
-Backend API URL:
-
-```text
-http://localhost:8080/research-center/api
-```
-
-For a deployed frontend outside CloudFront, set the public Nuxt API base URL before build/start:
+For non-CloudFront frontend environments, set the API base explicitly before build/start:
 
 ```bash
 export NUXT_PUBLIC_API_BASE='http://BACKEND_PUBLIC_DNS:8080/research-center/api'
+```
+
+## AWS Deployment
+
+Terraform lives in `terraform/`.
+
+Required sensitive variables:
+
+```bash
+export TF_VAR_db_password='change-me'
+export TF_VAR_wildfly_admin_password='change-me'
+```
+
+Recommended workflow:
+
+```bash
+terraform -chdir=terraform init
+terraform fmt -check -diff terraform
+terraform -chdir=terraform validate
+terraform -chdir=terraform plan -out=tfplan
+terraform -chdir=terraform apply tfplan
+```
+
+Quick apply:
+
+```bash
+terraform -chdir=terraform init && terraform -chdir=terraform apply
+```
+
+The EC2 backend bootstrap is handled through Terraform `user_data`. On first boot, the instance installs Docker, Docker Buildx, and Docker Compose; clones the configured repository; writes an `.env` file from Terraform variables; builds the WAR; starts an AWS-specific backend Compose service; and deploys the WAR into WildFly.
+
+The AWS bootstrap points the backend at RDS and intentionally avoids the local development PostgreSQL, fake SMTP, and Ollama services.
+
+Backend health check:
+
+```bash
+BACKEND_DNS=$(terraform -chdir=terraform output -raw backend_public_dns)
+curl -i "http://${BACKEND_DNS}:8080/research-center/api/publications"
+```
+
+## Frontend Deployment
+
+Terraform creates a private S3 bucket and CloudFront distribution for the generated Nuxt frontend. CloudFront serves static files from S3 and forwards `/research-center/api/*` to the backend EC2 instance, allowing the SPA to call the API over the same HTTPS origin.
+
+After Terraform has applied successfully and the backend API is healthy, deploy frontend files:
+
+```bash
+scripts/deploy-frontend.sh
+```
+
+The script:
+
+- Reads Terraform outputs.
+- Sets `NUXT_PUBLIC_API_BASE` to `/research-center/api` by default.
+- Runs `npm ci`.
+- Generates the static Nuxt site.
+- Syncs `.output/public` to S3.
+- Creates a CloudFront invalidation.
+
+Override the API base when needed:
+
+```bash
+NUXT_PUBLIC_API_BASE='https://api.example.com/research-center/api' scripts/deploy-frontend.sh
+```
+
+Print the frontend URL:
+
+```bash
+terraform -chdir=terraform output -raw frontend_static_url
 ```
 
 ## Verification
@@ -157,86 +225,39 @@ bash mvnw test
 Frontend production build:
 
 ```bash
-cd research-center-client
-npm run build
+NUXT_PUBLIC_API_BASE='/research-center/api' npm run build --prefix research-center-client
 ```
 
 Terraform formatting and validation:
 
 ```bash
 terraform fmt -check -diff terraform
-terraform -chdir=terraform init -backend=false
 terraform -chdir=terraform validate
+```
+
+Deployment script syntax:
+
+```bash
+bash -n scripts/deploy-frontend.sh
 ```
 
 Current project note: there is no `src/test` tree yet, so Maven reports that no tests are available.
 
-## AWS Infrastructure
-
-Terraform lives in `terraform/`.
-
-Required sensitive variables:
-
-```bash
-export TF_VAR_db_password='change-me'
-export TF_VAR_wildfly_admin_password='change-me'
-```
-
-Standard workflow:
-
-```bash
-terraform -chdir=terraform init
-terraform -chdir=terraform fmt -check
-terraform -chdir=terraform validate
-terraform -chdir=terraform plan
-terraform -chdir=terraform apply
-```
-
-Quick apply:
-
-```bash
-terraform -chdir=terraform init && terraform -chdir=terraform apply
-```
-
-The EC2 backend bootstrap installs Docker, Docker Buildx, and Docker Compose, clones the configured repository, writes the `.env` file from Terraform variables, builds the WAR, starts an AWS-specific Docker Compose backend service, and deploys the WAR into the WildFly container. The AWS bootstrap points the backend at RDS and intentionally does not start the local development PostgreSQL or Ollama services.
-
-Terraform also creates a private S3 bucket and CloudFront distribution for the generated Nuxt frontend. CloudFront serves the SPA from S3 and forwards `/research-center/api/*` requests to the backend EC2 instance, so the deployed frontend can use the relative API base `/research-center/api` over HTTPS.
-
-After infrastructure is applied and the backend API is healthy, deploy the frontend static files:
-
-```bash
-scripts/deploy-frontend.sh
-```
-
-The script reads Terraform outputs, sets `NUXT_PUBLIC_API_BASE` to `/research-center/api` by default, runs `npm ci`, generates the Nuxt site, uploads `.output/public` to S3, and creates a CloudFront invalidation.
-
-Override the API base when needed:
-
-```bash
-NUXT_PUBLIC_API_BASE='https://api.example.com/research-center/api' scripts/deploy-frontend.sh
-```
-
-Frontend URL:
-
-```bash
-terraform -chdir=terraform output -raw frontend_static_url
-```
-
 ## Operational Notes
 
-- Local Docker uses PostgreSQL in a container; Terraform uses managed RDS PostgreSQL.
+- Local Docker uses PostgreSQL in a container; AWS uses managed RDS PostgreSQL.
 - Production database subnets are private and do not receive public IPs.
 - The database security group allows `5432` only from the backend application security group.
 - RDS deletion protection is enabled by default.
-- The frontend ALB is internet-facing and spans public subnets.
+- The backend EC2 instance currently exposes WildFly on `8080` according to `backend_allowed_cidrs`.
 - The Nuxt frontend is hosted from private S3 through CloudFront.
-- HTTPS on the frontend ALB is enabled when `frontend_certificate_arn` is provided.
-- Custom CloudFront frontend domains require an ACM certificate in `us-east-1` via `frontend_cloudfront_certificate_arn`.
+- CloudFront custom frontend domains require an ACM certificate in `us-east-1` via `frontend_cloudfront_certificate_arn`.
+- The optional frontend ALB remains available for instance-based frontend targets but is not required for the S3/CloudFront deployment path.
 - `persistence.xml` currently uses `drop-and-create`, which recreates schema on startup. Change this before using persistent production data.
 
 ## Troubleshooting
 
-Check container status:
+Check local container status:
 
 ```bash
 make ps
@@ -248,13 +269,13 @@ Follow backend logs:
 make logs
 ```
 
-Open a shell in the WildFly container:
+Open a shell in the local WildFly container:
 
 ```bash
 make bash
 ```
 
-Access PostgreSQL locally:
+Access local PostgreSQL:
 
 ```bash
 make sql
