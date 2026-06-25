@@ -58,6 +58,24 @@ variable "backend_allowed_cidrs" {
   default     = ["0.0.0.0/0"]
 }
 
+variable "frontend_target_port" {
+  description = "Port where frontend web app targets listen inside the public subnets."
+  type        = number
+  default     = 80
+}
+
+variable "frontend_target_instance_ids" {
+  description = "Optional EC2 instance IDs running the frontend web app, registered behind the public frontend load balancer."
+  type        = set(string)
+  default     = []
+}
+
+variable "frontend_certificate_arn" {
+  description = "Optional ACM certificate ARN for HTTPS on the frontend load balancer. When set, HTTP redirects to HTTPS."
+  type        = string
+  default     = null
+}
+
 variable "db_name" {
   description = "Initial PostgreSQL database name."
   type        = string

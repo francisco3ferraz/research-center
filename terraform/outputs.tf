@@ -23,6 +23,16 @@ output "backend_public_dns" {
   value       = aws_instance.backend.public_dns
 }
 
+output "frontend_load_balancer_dns" {
+  description = "Public DNS name for the frontend application load balancer."
+  value       = aws_lb.frontend.dns_name
+}
+
+output "frontend_target_group_arn" {
+  description = "Target group ARN for frontend web app instances."
+  value       = aws_lb_target_group.frontend.arn
+}
+
 output "postgres_endpoint" {
   description = "RDS PostgreSQL endpoint."
   value       = aws_db_instance.postgres.endpoint
