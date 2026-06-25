@@ -46,6 +46,36 @@ variable "app_key_name" {
   default     = null
 }
 
+variable "wildfly_version" {
+  description = "WildFly version installed on the backend EC2 instance."
+  type        = string
+  default     = "27.0.0.Final"
+}
+
+variable "wildfly_admin_password" {
+  description = "WildFly management admin password."
+  type        = string
+  sensitive   = true
+}
+
+variable "postgres_driver_version" {
+  description = "PostgreSQL JDBC driver version installed into WildFly."
+  type        = string
+  default     = "42.5.4"
+}
+
+variable "backend_artifact_bucket" {
+  description = "Optional S3 bucket containing the backend WAR artifact."
+  type        = string
+  default     = ""
+}
+
+variable "backend_artifact_key" {
+  description = "Optional S3 object key for the backend WAR artifact."
+  type        = string
+  default     = ""
+}
+
 variable "ssh_allowed_cidrs" {
   description = "CIDR blocks allowed to SSH to the application server. Keep empty unless break-glass SSH is required."
   type        = list(string)

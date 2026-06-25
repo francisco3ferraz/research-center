@@ -44,6 +44,26 @@ resource "aws_iam_instance_profile" "app" {
   role = aws_iam_role.app.name
 }
 
+resource "aws_iam_role_policy" "app_artifact_read" {
+  count = var.backend_artifact_bucket != "" && var.backend_artifact_key != "" ? 1 : 0
+
+  name = "${local.name_prefix}-app-artifact-read"
+  role = aws_iam_role.app.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = "arn:aws:s3:::${var.backend_artifact_bucket}/${var.backend_artifact_key}"
+      }
+    ]
+  })
+}
+
 resource "aws_instance" "backend" {
   ami                         = data.aws_ami.amazon_linux_2023.id
   instance_type               = var.app_instance_type
@@ -65,10 +85,22 @@ resource "aws_instance" "backend" {
     volume_type = "gp3"
   }
 
+  user_data_replace_on_change = true
+
   user_data = templatefile("${path.module}/user_data_backend.sh.tftpl", {
-    db_host = aws_db_instance.postgres.address
-    db_port = aws_db_instance.postgres.port
-    db_name = var.db_name
+    app_name                = var.project_name
+    backend_artifact_bucket = var.backend_artifact_bucket
+    backend_artifact_key    = var.backend_artifact_key
+    datasource_jndi         = "java:/ResearchCenterDS"
+    datasource_name         = "ResearchCenterDS"
+    db_host                 = aws_db_instance.postgres.address
+    db_name                 = var.db_name
+    db_password             = var.db_password
+    db_port                 = aws_db_instance.postgres.port
+    db_username             = var.db_username
+    postgres_driver_version = var.postgres_driver_version
+    wildfly_admin_password  = var.wildfly_admin_password
+    wildfly_version         = var.wildfly_version
   })
 
   tags = {
