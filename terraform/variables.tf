@@ -112,6 +112,30 @@ variable "frontend_certificate_arn" {
   default     = null
 }
 
+variable "frontend_static_bucket_name" {
+  description = "Optional globally unique S3 bucket name for the static Nuxt frontend."
+  type        = string
+  default     = null
+}
+
+variable "frontend_cloudfront_price_class" {
+  description = "CloudFront price class for the static frontend distribution."
+  type        = string
+  default     = "PriceClass_100"
+}
+
+variable "frontend_domain_aliases" {
+  description = "Optional custom domain aliases for the static frontend CloudFront distribution."
+  type        = list(string)
+  default     = []
+}
+
+variable "frontend_cloudfront_certificate_arn" {
+  description = "Optional ACM certificate ARN in us-east-1 for CloudFront custom frontend domains."
+  type        = string
+  default     = null
+}
+
 variable "db_name" {
   description = "Initial PostgreSQL database name."
   type        = string

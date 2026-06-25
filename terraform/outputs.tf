@@ -33,6 +33,26 @@ output "frontend_target_group_arn" {
   value       = aws_lb_target_group.frontend.arn
 }
 
+output "frontend_static_bucket_name" {
+  description = "S3 bucket that stores the generated Nuxt frontend files."
+  value       = aws_s3_bucket.frontend_static.bucket
+}
+
+output "frontend_cloudfront_distribution_id" {
+  description = "CloudFront distribution ID for the static frontend."
+  value       = aws_cloudfront_distribution.frontend_static.id
+}
+
+output "frontend_cloudfront_domain_name" {
+  description = "CloudFront domain name for the static frontend."
+  value       = aws_cloudfront_distribution.frontend_static.domain_name
+}
+
+output "frontend_static_url" {
+  description = "HTTPS URL for the static frontend."
+  value       = "https://${aws_cloudfront_distribution.frontend_static.domain_name}"
+}
+
 output "postgres_endpoint" {
   description = "RDS PostgreSQL endpoint."
   value       = aws_db_instance.postgres.endpoint

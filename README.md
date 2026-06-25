@@ -30,6 +30,7 @@ Research Center is a full-stack publication management platform for academic res
 - Nuxt 4 SPA in `research-center-client`.
 - Tailwind CSS.
 - Default API base URL: `http://localhost:8080/research-center/api`.
+- Production static hosting through private S3 and CloudFront.
 
 ### Local Services
 
@@ -78,7 +79,7 @@ Local development:
 AWS deployment:
 
 - AWS credentials configured outside the repository.
-- Permission to manage VPC, EC2, IAM, ALB, RDS, and S3 resources.
+- Permission to manage VPC, EC2, IAM, ALB, RDS, S3, and CloudFront resources.
 - Secure values supplied through environment variables or a secrets workflow.
 
 ## Local Development
@@ -137,6 +138,12 @@ Backend API URL:
 http://localhost:8080/research-center/api
 ```
 
+For a deployed frontend outside CloudFront, set the public Nuxt API base URL before build/start:
+
+```bash
+export NUXT_PUBLIC_API_BASE='http://BACKEND_PUBLIC_DNS:8080/research-center/api'
+```
+
 ## Verification
 
 Backend compile/test lifecycle:
@@ -184,6 +191,28 @@ terraform -chdir=terraform plan
 
 The EC2 backend bootstrap installs Docker, Docker Buildx, and Docker Compose, clones the configured repository, writes the `.env` file from Terraform variables, builds the WAR, starts an AWS-specific Docker Compose backend service, and deploys the WAR into the WildFly container. The AWS bootstrap points the backend at RDS and intentionally does not start the local development PostgreSQL or Ollama services.
 
+Terraform also creates a private S3 bucket and CloudFront distribution for the generated Nuxt frontend. CloudFront serves the SPA from S3 and forwards `/research-center/api/*` requests to the backend EC2 instance, so the deployed frontend can use the relative API base `/research-center/api` over HTTPS.
+
+After infrastructure is applied and the backend API is healthy, deploy the frontend static files:
+
+```bash
+scripts/deploy-frontend.sh
+```
+
+The script reads Terraform outputs, sets `NUXT_PUBLIC_API_BASE` to `/research-center/api` by default, runs `npm ci`, generates the Nuxt site, uploads `.output/public` to S3, and creates a CloudFront invalidation.
+
+Override the API base when needed:
+
+```bash
+NUXT_PUBLIC_API_BASE='https://api.example.com/research-center/api' scripts/deploy-frontend.sh
+```
+
+Frontend URL:
+
+```bash
+terraform -chdir=terraform output -raw frontend_static_url
+```
+
 ## Operational Notes
 
 - Local Docker uses PostgreSQL in a container; Terraform uses managed RDS PostgreSQL.
@@ -191,7 +220,9 @@ The EC2 backend bootstrap installs Docker, Docker Buildx, and Docker Compose, cl
 - The database security group allows `5432` only from the backend application security group.
 - RDS deletion protection is enabled by default.
 - The frontend ALB is internet-facing and spans public subnets.
+- The Nuxt frontend is hosted from private S3 through CloudFront.
 - HTTPS on the frontend ALB is enabled when `frontend_certificate_arn` is provided.
+- Custom CloudFront frontend domains require an ACM certificate in `us-east-1` via `frontend_cloudfront_certificate_arn`.
 - `persistence.xml` currently uses `drop-and-create`, which recreates schema on startup. Change this before using persistent production data.
 
 ## Troubleshooting
