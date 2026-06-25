@@ -1,0 +1,13 @@
+#!/bin/bash
+set -euo pipefail
+
+dnf update -y
+dnf install -y java-17-amazon-corretto-headless
+
+cat >/etc/research-center-env <<'EOF'
+DATASOURCE_JNDI=java:/ResearchCenterDS
+DATASOURCE_NAME=ResearchCenterDS
+DB_HOST=${db_host}
+DB_PORT=${db_port}
+DB_NAME=${db_name}
+EOF
