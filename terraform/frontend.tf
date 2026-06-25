@@ -1,5 +1,5 @@
 resource "aws_lb" "frontend" {
-  name               = "${local.name_prefix}-frontend-alb"
+  name               = "${local.short_name_prefix}-fe-alb"
   load_balancer_type = "application"
   internal           = false
   security_groups    = [aws_security_group.frontend.id]
@@ -15,7 +15,7 @@ resource "aws_lb" "frontend" {
 }
 
 resource "aws_lb_target_group" "frontend" {
-  name        = "${local.name_prefix}-frontend-tg"
+  name        = "${local.short_name_prefix}-fe-tg"
   port        = var.frontend_target_port
   protocol    = "HTTP"
   target_type = "instance"
