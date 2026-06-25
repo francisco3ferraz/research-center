@@ -46,12 +46,6 @@ variable "app_key_name" {
   default     = null
 }
 
-variable "wildfly_version" {
-  description = "WildFly version installed on the backend EC2 instance."
-  type        = string
-  default     = "27.0.0.Final"
-}
-
 variable "wildfly_admin_password" {
   description = "WildFly management admin password."
   type        = string
@@ -64,16 +58,28 @@ variable "postgres_driver_version" {
   default     = "42.5.4"
 }
 
-variable "backend_artifact_bucket" {
-  description = "Optional S3 bucket containing the backend WAR artifact."
+variable "docker_compose_version" {
+  description = "Docker Compose plugin version installed by EC2 user data."
   type        = string
-  default     = ""
+  default     = "v2.40.3"
 }
 
-variable "backend_artifact_key" {
-  description = "Optional S3 object key for the backend WAR artifact."
+variable "docker_buildx_version" {
+  description = "Docker Buildx plugin version installed by EC2 user data."
   type        = string
-  default     = ""
+  default     = "v0.17.1"
+}
+
+variable "repository_url" {
+  description = "Git repository URL cloned by EC2 user data."
+  type        = string
+  default     = "https://github.com/francisco3ferraz/research-center.git"
+}
+
+variable "repository_ref" {
+  description = "Git branch or tag cloned by EC2 user data."
+  type        = string
+  default     = "master"
 }
 
 variable "ssh_allowed_cidrs" {

@@ -46,7 +46,7 @@ Terraform code in `terraform/` defines:
 
 - VPC with public subnets and private database subnets.
 - Public frontend Application Load Balancer.
-- EC2 instance for the WildFly backend.
+- EC2 instance that bootstraps Docker, clones the repository, and starts the backend stack with Docker Compose.
 - Private RDS PostgreSQL instance.
 - Security groups that restrict PostgreSQL port `5432` to the backend application server.
 
@@ -173,13 +173,6 @@ export TF_VAR_db_password='change-me'
 export TF_VAR_wildfly_admin_password='change-me'
 ```
 
-Optional backend artifact variables:
-
-```bash
-export TF_VAR_backend_artifact_bucket='my-artifacts-bucket'
-export TF_VAR_backend_artifact_key='research-center/research-center.war'
-```
-
 Standard workflow:
 
 ```bash
@@ -189,7 +182,7 @@ terraform -chdir=terraform validate
 terraform -chdir=terraform plan
 ```
 
-The EC2 backend bootstrap installs WildFly, installs the PostgreSQL JDBC driver, configures the RDS datasource, creates a systemd service, and optionally downloads the WAR from S3 when artifact variables are set.
+The EC2 backend bootstrap installs Docker, Docker Buildx, and Docker Compose, clones the configured repository, writes the `.env` file from Terraform variables, builds the WAR, starts an AWS-specific Docker Compose backend service, and deploys the WAR into the WildFly container. The AWS bootstrap points the backend at RDS and intentionally does not start the local development PostgreSQL or Ollama services.
 
 ## Operational Notes
 
