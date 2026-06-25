@@ -2,7 +2,7 @@
 set -euo pipefail
 
 dnf update -y
-dnf install -y awscli curl java-17-amazon-corretto-headless tar
+dnf install -y awscli java-17-amazon-corretto-headless tar
 
 groupadd --system wildfly || true
 id wildfly >/dev/null 2>&1 || useradd --system --gid wildfly --home-dir /opt/wildfly --shell /sbin/nologin wildfly
